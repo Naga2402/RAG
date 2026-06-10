@@ -29,6 +29,22 @@ question/ground-truth/source triples early, drawn from the real company docs.
 - Router: **per-language indices** so routing is a real retrieval decision, not just a prompt
 - Critic loop capped at `max_reflection_loops` to bound latency for fair benchmarking
 
+## Environment status (run `python scripts/check_env.py`)
+As of first setup on the RTX 5070 machine:
+- ✅ Python deps installed in `.venv`; smoke tests pass (4/4)
+- ✅ Ingestion verified on `data/samples` → 14 chunks, 7 EN / 7 AR
+- ✅ Postgres reachable on `localhost:5432`
+- ⚠️ **torch is CPU-only** (`2.12.0+cpu`) — reinstall CUDA 12.8 build for the 5070:
+  `pip uninstall -y torch && pip install torch --index-url https://download.pytorch.org/whl/cu128`
+- ⚠️ **ragas import fails** — `langchain_community.chat_models.vertexai` moved in
+  langchain 1.x. Eval harness (M4) needs a compatible pin; see Open items.
+- ⚠️ Ollama not running — install from ollama.com, then `ollama pull jais:13b llama3:8b`
+- ⚠️ Tesseract (+`ara`) and Poppler not on PATH — only needed for PDF/image OCR
+
 ## Open items to revisit
+- [ ] Reinstall CUDA 12.8 torch and re-run `check_env.py` to confirm the 5070 is seen
+- [ ] **Pin ragas/langchain compatibility** before M4 (ragas 0.4.3 vs langchain 1.3.6
+      breaks on the vertexai import path). Options: pin `langchain-community` to a
+      compatible release, or upgrade ragas; validate `python -c "import ragas"`.
 - [ ] Confirm Jais-13B q4_K_M actually fits alongside embeddings on 12 GB (else Jais-7B/offload)
 - [ ] Decide reranker on/off for the final benchmark (report both)

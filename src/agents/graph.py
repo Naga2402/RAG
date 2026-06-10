@@ -1,4 +1,4 @@
-"""Assembles the JISR LangGraph: the agentic reflection loop.
+r"""Assembles the JISR LangGraph: the agentic reflection loop.
 
     decompose -> route -> retrieve -> critic --(retry)--> retrieve
                                             \--(generate)--> generate -> END
