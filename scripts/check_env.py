@@ -6,8 +6,13 @@ up here (once) instead of deep inside the pipeline. Run after install:
 from __future__ import annotations
 
 import importlib
+import pathlib
 import shutil
 import socket
+import sys
+
+# Make the repo root importable so `src.*` resolves when run as a script.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 
 def _ok(label, val):
@@ -20,6 +25,11 @@ def _warn(label, val):
 
 def check_python_pkgs():
     print("Python packages")
+    # ragas needs the langchain-1.x compatibility shim before import.
+    try:
+        from src.eval import _compat  # noqa: F401
+    except Exception:
+        pass
     for mod in ["langgraph", "langchain", "FlagEmbedding", "ragas",
                 "psycopg", "pgvector", "ollama", "torch", "transformers"]:
         try:

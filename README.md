@@ -55,9 +55,21 @@ python -m src.ingestion.run --input data/raw
 python -m src.indexing.build
 # 4. Ask
 python -m src.agents.run --query "ما هي شروط الدفع في العقد؟"
-# 5. Benchmark
+# 5. Benchmark (Agentic vs Naive)
 python -m src.eval.run --golden data/golden/sample_golden.jsonl
 ```
+
+## Environment doctor
+```bash
+python scripts/check_env.py   # verifies deps, GPU/CUDA, OCR binaries, Postgres, Ollama
+```
+For the RTX 5070 (Blackwell), install the CUDA 12.8 torch build, not the default CPU wheel:
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+```
+> Note: `src/eval/_compat.py` ships a small shim so ragas (which expects an older
+> langchain) imports cleanly on the langchain 1.x stack used by LangGraph. No
+> separate environment needed.
 
 ## Sample data
 `data/samples/` ships 6 committed bilingual fixtures (EN+AR invoice, service

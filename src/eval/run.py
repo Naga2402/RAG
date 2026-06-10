@@ -8,6 +8,8 @@ Usage:
 """
 from __future__ import annotations
 
+from src.eval import _compat  # noqa: F401  -- installs ragas shim BEFORE ragas import
+
 import argparse
 import json
 from pathlib import Path

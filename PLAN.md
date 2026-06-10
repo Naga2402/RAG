@@ -34,17 +34,17 @@ As of first setup on the RTX 5070 machine:
 - ✅ Python deps installed in `.venv`; smoke tests pass (4/4)
 - ✅ Ingestion verified on `data/samples` → 14 chunks, 7 EN / 7 AR
 - ✅ Postgres reachable on `localhost:5432`
-- ⚠️ **torch is CPU-only** (`2.12.0+cpu`) — reinstall CUDA 12.8 build for the 5070:
-  `pip uninstall -y torch && pip install torch --index-url https://download.pytorch.org/whl/cu128`
-- ⚠️ **ragas import fails** — `langchain_community.chat_models.vertexai` moved in
-  langchain 1.x. Eval harness (M4) needs a compatible pin; see Open items.
+- ✅ **torch CUDA 12.8** installed (`2.11.0+cu128`); `torch.cuda` sees the
+      **RTX 5070 (12226 MB)**
+- ✅ **ragas imports** on the langchain 1.x stack via `src/eval/_compat.py` shim
+      (stubs the one removed `langchain_community.chat_models.vertexai` module;
+      JISR never uses Vertex AI). A separate 0.2-era venv was rejected: langchain
+      0.2.x pins numpy < 2.0, which has no Python 3.13 wheels.
 - ⚠️ Ollama not running — install from ollama.com, then `ollama pull jais:13b llama3:8b`
 - ⚠️ Tesseract (+`ara`) and Poppler not on PATH — only needed for PDF/image OCR
 
 ## Open items to revisit
-- [ ] Reinstall CUDA 12.8 torch and re-run `check_env.py` to confirm the 5070 is seen
-- [ ] **Pin ragas/langchain compatibility** before M4 (ragas 0.4.3 vs langchain 1.3.6
-      breaks on the vertexai import path). Options: pin `langchain-community` to a
-      compatible release, or upgrade ragas; validate `python -c "import ragas"`.
+- [ ] Install Ollama + pull Jais-13B / Llama-3; confirm both run, then wire inference
+- [ ] Install Tesseract (+`ara`) and Poppler before ingesting real PDF/image docs
 - [ ] Confirm Jais-13B q4_K_M actually fits alongside embeddings on 12 GB (else Jais-7B/offload)
 - [ ] Decide reranker on/off for the final benchmark (report both)
