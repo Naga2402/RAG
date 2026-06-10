@@ -9,14 +9,25 @@ Poppler) are imported lazily, so text ingestion works before they're installed.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from src.config import CFG
+from src.config import CFG, ROOT
 
 _OCR = CFG["ingestion"]["ocr"]
 
 TEXT_EXT = {".txt", ".md"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+
+# Point Tesseract at the project-local tessdata (eng+ara) if configured.
+_tessdata = _OCR.get("tessdata_dir")
+if _tessdata:
+    _abs = (ROOT / _tessdata).resolve()
+    if _abs.is_dir():
+        os.environ.setdefault("TESSDATA_PREFIX", str(_abs))
+
+# Poppler bin for pdf2image: config value, else POPPLER_PATH env, else PATH.
+_POPPLER = _OCR.get("poppler_path") or os.getenv("POPPLER_PATH") or None
 
 
 def _ocr_image(img) -> str:
@@ -50,7 +61,9 @@ def extract_text(path: str | Path) -> str:
             else:
                 needs_ocr_pages.append(i)
         if needs_ocr_pages:
-            images = convert_from_path(str(path), dpi=_OCR["dpi"])
+            images = convert_from_path(
+                str(path), dpi=_OCR["dpi"], poppler_path=_POPPLER
+            )
             for i in needs_ocr_pages:
                 parts.append(_ocr_image(images[i]))
         return "\n".join(parts)

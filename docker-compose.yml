@@ -1,0 +1,32 @@
+# pgvector-backed Postgres for JISR.
+#
+# Native PostgreSQL 17 already holds port 5432, so this container publishes on
+# 5433 to avoid a clash (config/settings.yaml points here). pgvector is built
+# into the official image, so no Windows compiler is needed.
+#
+#   docker compose up -d          # start
+#   docker compose down           # stop (keeps data volume)
+#   docker compose down -v        # stop and wipe data
+#
+# PG_PASSWORD is read from .env (gitignored). Set it there before `up`.
+
+services:
+  jisr-pg:
+    image: pgvector/pgvector:pg17
+    container_name: jisr-pg
+    environment:
+      POSTGRES_DB: jisr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?set PG_PASSWORD in .env}
+    ports:
+      - "5433:5432"
+    volumes:
+      - jisr_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jisr"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  jisr_pgdata:

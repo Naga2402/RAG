@@ -10,3 +10,5 @@ results/*
 !results/.gitkeep
 *.gguf
 .ragas_cache/
+tessdata/*.traineddata
+

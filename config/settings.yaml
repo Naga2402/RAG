@@ -11,6 +11,12 @@ ingestion:
     engine: tesseract          # tesseract | surya
     languages: "eng+ara"
     dpi: 300
+    # Project-local tessdata (best-quality eng/ara models) since Program Files
+    # needs admin. Sets TESSDATA_PREFIX at runtime. Repo-relative path.
+    tessdata_dir: tessdata
+    # Poppler bin for pdf2image. Empty => rely on PATH (winget adds a shim).
+    # Override here or via the POPPLER_PATH env var if needed.
+    poppler_path: ""
   chunking:
     strategy: layout           # layout-aware chunking
     chunk_size: 800
@@ -26,7 +32,7 @@ vector_store:
   backend: pgvector            # pgvector (primary) | chroma
   pgvector:
     host: localhost
-    port: 5432
+    port: 5433                 # Docker pgvector container (native PG17 holds 5432)
     dbname: jisr
     user: postgres
     password: ${PG_PASSWORD}   # set in env
@@ -42,12 +48,17 @@ vector_store:
 inference:
   backend: ollama              # ollama | llama_cpp
   models:
-    ar: jais:13b               # Arabic-centric
-    en: llama3:8b              # English
+    # Arabic-centric. The ORIGINAL jais-13b uses a custom GPT-3/ALiBi architecture
+    # that llama.cpp/Ollama don't support; the inceptionai "jais-adapted-13b" family
+    # is Llama-2-based and runs natively. Pulled from HF as a single Q4_K_M GGUF (8.09 GB).
+    ar: hf.co/Solshine/jais-adapted-13b-chat-Q4_K_M-GGUF
+    en: llama3:8b              # English (official Ollama, ~4.7 GB Q4)
   quantization: q4_K_M         # INT4 GGUF — fits 12 GB VRAM (RTX 5070)
   max_vram_gb: 12
   context_window: 4096
   temperature: 0.1
+  # Ollama loads one model at a time on demand, so only the routed model is resident:
+  # 8.09 GB (Jais) or ~4.7 GB (Llama-3) — both fit the 12 GB card with context headroom.
 
 agent:
   max_reflection_loops: 2      # Critic can re-retrieve up to N times

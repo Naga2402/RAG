@@ -10,6 +10,15 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 _ENV_RE = re.compile(r"\$\{([^}]+)\}")
 
+# Load .env (gitignored) so secrets like PG_PASSWORD are available to ${VAR}
+# expansion below — the same .env that docker-compose reads.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
 
 def _expand(obj):
     if isinstance(obj, dict):
