@@ -43,8 +43,22 @@ As of first setup on the RTX 5070 machine:
 - ⚠️ Ollama not running — install from ollama.com, then `ollama pull jais:13b llama3:8b`
 - ⚠️ Tesseract (+`ara`) and Poppler not on PATH — only needed for PDF/image OCR
 
+## Local LLM VRAM (RTX 5070, 12 GB) — measured via scripts/verify_models.py
+| Model | Quant | Total @4096 ctx | GPU placement |
+|-------|-------|-----------------|---------------|
+| Llama-3 8B (`llama3:8b`) | Q4 | 5.01 GB | **100% GPU** (no offload) |
+| Jais-adapted-13B chat (HF GGUF) | Q4_K_M | 11 GB | **88% GPU / 12% CPU** |
+
+Jais at 4096 context slightly exceeds the usable VRAM budget (Ollama reserves
+~1 GB headroom), so 12% offloads to CPU. This is a genuine VRAM-constraint result
+for the thesis. Levers to get Jais fully on GPU: lower `context_window` (e.g. 2048),
+or a smaller quant (Q4_K_S / Q3_K_M).
+
 ## Open items to revisit
-- [ ] Install Ollama + pull Jais-13B / Llama-3; confirm both run, then wire inference
-- [ ] Install Tesseract (+`ara`) and Poppler before ingesting real PDF/image docs
-- [ ] Confirm Jais-13B q4_K_M actually fits alongside embeddings on 12 GB (else Jais-7B/offload)
+- [ ] **Jais chat template**: the bare HF GGUF answered an Arabic prompt in English
+      with an assistant-refusal style. Wrap it in an Ollama Modelfile with the correct
+      Jais chat template / system prompt before quality benchmarking (M3).
+- [ ] Tune Jais `context_window`/quant to remove the 12% CPU offload (VRAM chapter)
+- [ ] Tesseract (+ara) and Poppler are installed; validate Arabic OCR on a real
+      scanned PDF when the company docs arrive
 - [ ] Decide reranker on/off for the final benchmark (report both)
