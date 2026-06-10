@@ -47,6 +47,13 @@ def init_schema(conn: psycopg.Connection) -> None:
     conn.commit()
 
 
+def reset(conn) -> None:
+    """Truncate both language tables for a clean rebuild."""
+    for table in _V["tables"].values():
+        conn.execute(f"TRUNCATE {table} RESTART IDENTITY")
+    conn.commit()
+
+
 def upsert(conn, lang: str, rows: list[dict]) -> None:
     table = _V["tables"][lang]
     with conn.cursor() as cur:
@@ -70,10 +77,12 @@ def hybrid_search(conn, lang: str, query_emb: dict, top_k: int | None = None) ->
     k = top_k or _H["top_k"]
     pool = max(k * 4, 20)
     with conn.cursor() as cur:
+        # Cast the bound list to `vector`; without context psycopg sends it as
+        # double precision[], which the <=> operator does not accept.
         cur.execute(
             f"SELECT id, source, chunk_idx, content, sparse, "
-            f"1 - (embedding <=> %s) AS dense_sim "
-            f"FROM {table} ORDER BY embedding <=> %s LIMIT %s",
+            f"1 - (embedding <=> %s::vector) AS dense_sim "
+            f"FROM {table} ORDER BY embedding <=> %s::vector LIMIT %s",
             (query_emb["dense"], query_emb["dense"], pool),
         )
         rows = cur.fetchall()

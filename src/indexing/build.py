@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from src.config import CFG, ROOT
 from src.indexing import vector_store as vs
-from src.indexing.embeddings import embed
+from src.indexing.embeddings import embed, warmup
 
 BATCH = 32
 
@@ -27,8 +27,10 @@ def _flush(conn, lang: str, batch: list[dict]) -> None:
 
 def main() -> None:
     src = ROOT / CFG["ingestion"]["output_dir"] / "chunks.jsonl"
+    warmup()                 # load torch/BGE-M3 before psycopg (OpenMP ordering)
     conn = vs.connect()
     vs.init_schema(conn)
+    vs.reset(conn)           # clean slate so re-runs don't duplicate rows
 
     buckets: dict[str, list[dict]] = {"en": [], "ar": []}
     with open(src, "r", encoding="utf-8") as fh:

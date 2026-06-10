@@ -6,7 +6,7 @@ Aligned to the BITS dissertation timeline (16 weeks, May–Aug). Current positio
 |-----------|--------|-------------|--------|
 | **M0 — Setup** | Wk 1–2 | Repo scaffold, Ollama + pgvector running, golden dataset started | 🟡 in progress |
 | **M1 — Ingestion** | Wk 3–5 | OCR (ara+eng) + layout chunker + language tagging → `data/processed` | ⬜ |
-| **M2 — Indexing** | Wk 6–8 | BGE-M3 + BM25 hybrid index in pgvector; separate EN/AR collections | ⬜ |
+| **M2 — Indexing** | Wk 6–8 | BGE-M3 + BM25 hybrid index in pgvector; separate EN/AR collections | 🟡 working on samples |
 | **M3 — Agentic core** | Wk 9–10 | LangGraph reflection loop + semantic router; naive baseline in parallel | ⬜ |
 | **M4 — Benchmark** | Wk 11–13 | Ragas: Agentic vs Naive; VRAM/latency profiling on RTX 5070 | ⬜ |
 | **M5 — Report** | Wk 14–16 | Dissertation chapters, formatting, plagiarism check, final submission | ⬜ |
@@ -36,6 +36,13 @@ As of first setup on the RTX 5070 machine:
 - ✅ Postgres reachable on `localhost:5432`
 - ✅ **torch CUDA 12.8** installed (`2.11.0+cu128`); `torch.cuda` sees the
       **RTX 5070 (12226 MB)**
+- ✅ **Ollama** + models: `llama3:8b` and Jais-adapted-13b (HF GGUF) pulled
+- ✅ **Dockerized pgvector** (pgvector 0.8.2, PG17) on 5433; healthy
+- ✅ **Hybrid index built** from samples: 7 EN + 7 AR chunks; bilingual hybrid
+      retrieval verified end-to-end (`scripts/verify_index.py`)
+- ⚠️ **Windows OpenMP**: torch must load before psycopg or the process segfaults
+      (duplicate libiomp5md.dll). Indexing calls `embeddings.warmup()` first; the
+      agent path is naturally ordered (embed before DB).
 - ✅ **ragas imports** on the langchain 1.x stack via `src/eval/_compat.py` shim
       (stubs the one removed `langchain_community.chat_models.vertexai` module;
       JISR never uses Vertex AI). A separate 0.2-era venv was rejected: langchain

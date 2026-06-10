@@ -16,6 +16,16 @@ def _model():
     return BGEM3FlagModel(_E["model"], use_fp16=(_E["device"] == "cuda"))
 
 
+def warmup() -> None:
+    """Force-load the embedding model (and torch's OpenMP runtime).
+
+    On Windows, loading torch AFTER psycopg's native libs triggers a duplicate
+    libiomp5md.dll crash (segfault). Call this before opening a DB connection so
+    torch's OpenMP initializes first. Safe to call multiple times (cached).
+    """
+    _model()
+
+
 def embed(texts: list[str], dense: bool = True, sparse: bool = True) -> list[dict]:
     """Return list of {'dense': [...], 'sparse': {token_id: weight}} per text."""
     out = _model().encode(
