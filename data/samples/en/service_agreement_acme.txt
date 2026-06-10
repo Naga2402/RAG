@@ -1,0 +1,31 @@
+SERVICE AGREEMENT
+
+This Service Agreement ("Agreement") is entered into on 1 February 2026 between
+ACME Industrial Supplies LLC ("Supplier") and VICISOFT Technologies Pvt Ltd ("Client").
+
+1. SCOPE OF SERVICES
+The Supplier shall provide maintenance and commissioning services for the X200
+industrial pump units installed at the Client's Hyderabad facility.
+
+2. TERM
+This Agreement shall remain in effect for a period of twelve (12) months from the
+effective date and shall renew automatically unless terminated with 30 days notice.
+
+3. PAYMENT TERMS
+The Client shall pay all undisputed invoices within Net 30 days from the invoice date.
+A late payment charge of 1.5% per month applies to overdue balances.
+
+4. WARRANTY
+The Supplier warrants the industrial pump for a period of 24 months from the date of
+commissioning against defects in materials and workmanship.
+
+5. CONFIDENTIALITY
+Both parties shall keep confidential all proprietary information disclosed under this
+Agreement for a period of five (5) years following termination.
+
+6. GOVERNING LAW
+This Agreement shall be governed by the laws of the Emirate of Dubai, UAE.
+
+Signed:
+For Supplier: ____________________
+For Client:   ____________________

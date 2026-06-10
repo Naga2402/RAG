@@ -1,0 +1,61 @@
+# JISR configuration — single source of truth for the pipeline.
+
+project:
+  name: JISR
+  languages: [en, ar]
+
+ingestion:
+  input_dir: data/raw
+  output_dir: data/processed
+  ocr:
+    engine: tesseract          # tesseract | surya
+    languages: "eng+ara"
+    dpi: 300
+  chunking:
+    strategy: layout           # layout-aware chunking
+    chunk_size: 800
+    chunk_overlap: 120
+
+embeddings:
+  model: BAAI/bge-m3           # multilingual dense + sparse
+  device: cuda
+  normalize: true
+  reranker: BAAI/bge-reranker-v2-m3   # optional, boosts context precision
+
+vector_store:
+  backend: pgvector            # pgvector (primary) | chroma
+  pgvector:
+    host: localhost
+    port: 5432
+    dbname: jisr
+    user: postgres
+    password: ${PG_PASSWORD}   # set in env
+    # Separate collections per language enable the cross-lingual router
+    tables:
+      en: chunks_en
+      ar: chunks_ar
+  hybrid:
+    dense_weight: 0.6
+    sparse_weight: 0.4
+    top_k: 8
+
+inference:
+  backend: ollama              # ollama | llama_cpp
+  models:
+    ar: jais:13b               # Arabic-centric
+    en: llama3:8b              # English
+  quantization: q4_K_M         # INT4 GGUF — fits 12 GB VRAM (RTX 5070)
+  max_vram_gb: 12
+  context_window: 4096
+  temperature: 0.1
+
+agent:
+  max_reflection_loops: 2      # Critic can re-retrieve up to N times
+  relevance_threshold: 0.7     # below this, Critic forces a re-retrieve/rewrite
+  router: semantic             # semantic intent-based EN/AR routing
+
+eval:
+  golden_set: data/golden/sample_golden.jsonl
+  metrics: [faithfulness, answer_relevancy, context_precision, context_recall]
+  baselines: [naive, agentic]
+  results_dir: results

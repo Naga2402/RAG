@@ -1,0 +1,4 @@
+{"id": "en-001", "lang": "en", "question": "What is the payment term stated in the service contract?", "ground_truth": "Net 30 days from the invoice date.", "source": "contracts/service_agreement_acme.pdf"}
+{"id": "en-002", "lang": "en", "question": "Which warranty period applies to the industrial pump in the technical manual?", "ground_truth": "24 months from the date of commissioning.", "source": "manuals/pump_x200_manual.pdf"}
+{"id": "ar-001", "lang": "ar", "question": "ما هي شروط الدفع المذكورة في عقد الخدمة؟", "ground_truth": "صافي 30 يومًا من تاريخ الفاتورة.", "source": "contracts/service_agreement_acme_ar.pdf"}
+{"id": "ar-002", "lang": "ar", "question": "ما هي مدة الضمان للمضخة الصناعية حسب الدليل الفني؟", "ground_truth": "24 شهرًا من تاريخ التشغيل.", "source": "manuals/pump_x200_manual_ar.pdf"}

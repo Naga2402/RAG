@@ -1,0 +1,30 @@
+X200 INDUSTRIAL PUMP — TECHNICAL MANUAL
+
+1. SPECIFICATIONS
+   Model: X200
+   Maximum Flow Rate: 200 litres per minute
+   Maximum Head: 45 metres
+   Power Supply: 415V, 3-phase, 50 Hz
+   Inlet/Outlet: 2 inch flanged
+
+2. INSTALLATION
+   Mount the pump on a level concrete foundation. Ensure the suction line is as short
+   and straight as possible. Torque all flange bolts to 35 Nm.
+
+3. COMMISSIONING
+   Prime the pump before first start. Verify the direction of rotation matches the arrow
+   on the casing. Run for 10 minutes and check for abnormal vibration or noise.
+
+4. MAINTENANCE SCHEDULE
+   Daily:    Check for leaks and unusual noise.
+   Monthly:  Inspect the mechanical seal and bearing temperature.
+   Annually: Replace the pump seal kit and recalibrate the pressure gauge.
+
+5. WARRANTY
+   The pump is covered by a 24-month warranty from the date of commissioning. The
+   warranty is void if the unit is operated beyond its rated flow or head.
+
+6. TROUBLESHOOTING
+   No flow:        Check that the pump is primed and the suction valve is open.
+   Low pressure:   Inspect for a worn impeller or a blocked discharge line.
+   Overheating:    Verify adequate cooling and correct bearing lubrication.

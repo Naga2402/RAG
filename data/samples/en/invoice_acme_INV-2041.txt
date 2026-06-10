@@ -1,0 +1,28 @@
+ACME INDUSTRIAL SUPPLIES LLC
+Tax Invoice
+
+Invoice Number: INV-2041
+Invoice Date: 12 March 2026
+Due Date: 11 April 2026
+Customer: VICISOFT Technologies Pvt Ltd
+Customer PO: PO-7789
+
+Bill To:
+VICISOFT Technologies Pvt Ltd
+Plot 14, HITEC City, Hyderabad 500081, India
+
+-------------------------------------------------------------
+Line  Description                         Qty   Unit Price   Amount
+1     X200 Industrial Pump                2     1,250.00     2,500.00
+2     Pump Seal Kit (spare)               4       85.00        340.00
+3     On-site Commissioning Service       1      600.00        600.00
+-------------------------------------------------------------
+                                   Subtotal:                 3,440.00
+                                   VAT (5%):                   172.00
+                                   Total Due (USD):          3,612.00
+
+Payment Terms: Net 30 days from the invoice date.
+Late payments are subject to 1.5% interest per month.
+Bank: First Gulf Bank, IBAN: AE12 0331 2345 6789 0123 456
+
+Thank you for your business.
