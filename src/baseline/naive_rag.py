@@ -6,9 +6,10 @@ pipeline is measured against with Ragas.
 """
 from __future__ import annotations
 
+from src.agents.nodes import _ANSWER_SYS  # same generation prompt as the agent
 from src.agents.router import route
 from src.indexing import vector_store as vs
-from src.indexing.embeddings import embed_query
+from src.indexing.embeddings import embed_query, warmup
 from src.inference.llm import generate
 
 _conn = None
@@ -17,16 +18,17 @@ _conn = None
 def _db():
     global _conn
     if _conn is None:
+        warmup()           # load torch/BGE-M3 before psycopg (OpenMP ordering)
         _conn = vs.connect()
     return _conn
 
 
-_SYS = "Answer using only the provided context. Reply in the question's language."
-
-
 def naive_answer(query: str) -> dict:
     lang = route(query)
-    contexts = vs.hybrid_search(_db(), lang, embed_query(query))
+    emb = embed_query(query)           # embed BEFORE connecting (OpenMP ordering)
+    contexts = vs.hybrid_search(_db(), lang, emb)
     ctx = "\n---\n".join(c["content"] for c in contexts)
-    ans = generate(f"Context:\n{ctx}\n\nQuestion: {query}\n\nAnswer:", lang=lang, system=_SYS)
+    # Identical generation to the agent so the ONLY difference is the critic loop.
+    ans = generate(f"Context:\n{ctx}\n\nQuestion: {query}\n\nAnswer:",
+                   lang=lang, system=_ANSWER_SYS[lang])
     return {"query": query, "lang": lang, "answer": ans, "contexts": contexts}
