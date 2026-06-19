@@ -15,6 +15,7 @@ from src.indexing.embeddings import embed_query
 from src.inference.llm import generate
 
 _A = CFG["agent"]
+_CRITIC_MODEL = CFG["inference"].get("critic_model")  # one judge for both languages
 
 # Lazy single connection for the graph run.
 _conn = None
@@ -77,7 +78,8 @@ def critic_node(state: AgentState) -> AgentState:
     ctx = "\n---\n".join(c["content"] for c in state.get("contexts", []))
     prompt = (f"Question: {state['query']}\n\nContext:\n{ctx}\n\n"
               f"Is the context sufficient? Answer YES or NO:")
-    raw = generate(prompt, lang=state["lang"], system=_CRITIC_SYS)
+    raw = generate(prompt, lang=state["lang"], system=_CRITIC_SYS,
+                   model=_CRITIC_MODEL)
     verdict = _verdict_relevant(raw)
     state["relevant"] = True if verdict is None else verdict  # fail open
     state["critique"] = raw.strip()[:200] or "(empty verdict; proceeding)"

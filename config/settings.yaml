@@ -55,6 +55,11 @@ inference:
     # (build: `ollama create jais-chat -f models/Modelfile.jais`).
     ar: jais-chat
     en: llama3:8b              # English (official Ollama, ~4.7 GB Q4)
+  # The Critic/reflection node uses ONE model for both languages: Llama-3 follows
+  # instructions and reads Arabic reliably, whereas Jais is an inconsistent judge.
+  # User-facing generation still routes by language (Jais for AR). Trade-off: an
+  # Arabic query swaps Llama-3 (critic) -> Jais (generate) in VRAM.
+  critic_model: llama3:8b
   quantization: q4_K_M         # INT4 GGUF — fits 12 GB VRAM (RTX 5070)
   max_vram_gb: 12
   context_window: 4096

@@ -13,13 +13,16 @@ def _model_for(lang: str) -> str:
     return _I["models"].get(lang, _I["models"]["en"])
 
 
-def generate(prompt: str, lang: str = "en", system: str | None = None) -> str:
+def generate(prompt: str, lang: str = "en", system: str | None = None,
+             model: str | None = None) -> str:
+    """Generate a completion. `model` overrides language routing (used by the
+    Critic node, which always judges with the configured critic model)."""
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
     resp = ollama.chat(
-        model=_model_for(lang),
+        model=model or _model_for(lang),
         messages=messages,
         options={
             "temperature": _I["temperature"],
