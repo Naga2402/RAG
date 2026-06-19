@@ -14,6 +14,7 @@ services:
   jisr-pg:
     image: pgvector/pgvector:pg17
     container_name: jisr-pg
+    restart: unless-stopped     # auto-start with Docker Desktop across reboots
     environment:
       POSTGRES_DB: jisr
       POSTGRES_USER: postgres

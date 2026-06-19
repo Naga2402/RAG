@@ -50,8 +50,10 @@ inference:
   models:
     # Arabic-centric. The ORIGINAL jais-13b uses a custom GPT-3/ALiBi architecture
     # that llama.cpp/Ollama don't support; the inceptionai "jais-adapted-13b" family
-    # is Llama-2-based and runs natively. Pulled from HF as a single Q4_K_M GGUF (8.09 GB).
-    ar: hf.co/Solshine/jais-adapted-13b-chat-Q4_K_M-GGUF
+    # is Llama-2-based and runs natively. Pulled from HF as a single Q4_K_M GGUF (8.09 GB),
+    # then wrapped with the official Jais chat template via models/Modelfile.jais
+    # (build: `ollama create jais-chat -f models/Modelfile.jais`).
+    ar: jais-chat
     en: llama3:8b              # English (official Ollama, ~4.7 GB Q4)
   quantization: q4_K_M         # INT4 GGUF — fits 12 GB VRAM (RTX 5070)
   max_vram_gb: 12

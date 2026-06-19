@@ -1,0 +1,25 @@
+# JISR Arabic model: jais-adapted-13b-chat wrapped with the OFFICIAL Jais chat
+# template (the bare GGUF shipped a generic Alpaca template, so it answered Arabic
+# prompts in English). Build with:
+#   ollama create jais-chat -f models/Modelfile.jais
+# Template + params per the inceptionai/jais-adapted-13b-chat model card.
+
+FROM hf.co/Solshine/jais-adapted-13b-chat-Q4_K_M-GGUF:latest
+
+TEMPLATE """### Instruction: {{ .System }}
+Complete the conversation between [|Human|] and [|AI|]:
+### Input: [|Human|] {{ .Prompt }}
+[|AI|]
+### Response :"""
+
+# Default identity used only when the caller supplies no system prompt.
+SYSTEM """Your name is 'Jais', and you are named after Jebel Jais, the highest mountain in UAE. You were made by 'Inception' in the UAE. You are a helpful, respectful, and honest assistant. Always answer as helpfully as possible while being safe, and reply in the same language as the question."""
+
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.2
+PARAMETER num_ctx 4096
+PARAMETER stop "[|Human|]"
+PARAMETER stop "### Input:"
+PARAMETER stop "### Instruction:"
+PARAMETER stop "### Response"

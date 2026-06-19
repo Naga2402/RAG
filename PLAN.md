@@ -7,7 +7,7 @@ Aligned to the BITS dissertation timeline (16 weeks, May–Aug). Current positio
 | **M0 — Setup** | Wk 1–2 | Repo scaffold, Ollama + pgvector running, golden dataset started | 🟡 in progress |
 | **M1 — Ingestion** | Wk 3–5 | OCR (ara+eng) + layout chunker + language tagging → `data/processed` | ⬜ |
 | **M2 — Indexing** | Wk 6–8 | BGE-M3 + BM25 hybrid index in pgvector; separate EN/AR collections | 🟡 working on samples |
-| **M3 — Agentic core** | Wk 9–10 | LangGraph reflection loop + semantic router; naive baseline in parallel | ⬜ |
+| **M3 — Agentic core** | Wk 9–10 | LangGraph reflection loop + semantic router; naive baseline in parallel | 🟡 loop works EN+AR; critic tuning pending |
 | **M4 — Benchmark** | Wk 11–13 | Ragas: Agentic vs Naive; VRAM/latency profiling on RTX 5070 | ⬜ |
 | **M5 — Report** | Wk 14–16 | Dissertation chapters, formatting, plagiarism check, final submission | ⬜ |
 
@@ -61,10 +61,21 @@ Jais at 4096 context slightly exceeds the usable VRAM budget (Ollama reserves
 for the thesis. Levers to get Jais fully on GPU: lower `context_window` (e.g. 2048),
 or a smaller quant (Q4_K_S / Q3_K_M).
 
+## M3 status — agentic loop runs end-to-end (EN + AR)
+- ✅ Jais chat template fixed: `models/Modelfile.jais` -> `jais-chat` (config `ar`).
+      Arabic answers are now fluent, grounded, and cited.
+- ✅ Router → hybrid retrieve → critic → generate works for both languages.
+- ✅ Critic switched from JSON to a YES/NO verdict (robust for Jais).
+- ✅ Generation system prompt is language-specific (Arabic prompt enforces Arabic).
+- ⚠️ **Critic judgment with Jais is over-strict**: it answered NO for a query whose
+      AR context clearly contained the answer, wasting reflection loops (fail-through
+      at max_loops still produced the correct answer). DECISION NEEDED — see below.
+
 ## Open items to revisit
-- [ ] **Jais chat template**: the bare HF GGUF answered an Arabic prompt in English
-      with an assistant-refusal style. Wrap it in an Ollama Modelfile with the correct
-      Jais chat template / system prompt before quality benchmarking (M3).
+- [ ] **Critic model choice**: Jais is an unreliable judge. Options: (A) use Llama-3
+      as the critic for BOTH languages (reliable, but model-swap cost per AR query),
+      (B) keep Jais critic (efficient, weaker judgment), (C) tune the critic prompt.
+      Affects the "agentic > naive" benchmark story.
 - [ ] Tune Jais `context_window`/quant to remove the 12% CPU offload (VRAM chapter)
 - [ ] Tesseract (+ara) and Poppler are installed; validate Arabic OCR on a real
       scanned PDF when the company docs arrive

@@ -7,8 +7,6 @@ pass (bounded by max_reflection_loops) before the model is allowed to answer.
 """
 from __future__ import annotations
 
-import json
-
 from src.agents.router import route
 from src.agents.state import AgentState
 from src.config import CFG
@@ -49,25 +47,40 @@ def retrieve_node(state: AgentState) -> AgentState:
     return state
 
 
+# A single-word YES/NO verdict is far more robust than JSON across both models
+# (Jais in particular is unreliable at structured JSON) and both languages.
 _CRITIC_SYS = (
-    "You are a strict retrieval critic. Given a question and retrieved context, "
-    "answer ONLY with JSON: {\"relevant\": true|false, \"reason\": \"...\"}. "
-    "Mark relevant=false if the context does not contain enough information to "
-    "answer faithfully."
+    "You are a strict retrieval critic. Decide whether the provided context "
+    "contains enough information to answer the question faithfully. "
+    "Reply with exactly one word: YES if it is sufficient, or NO if it is not. "
+    "أجب بكلمة واحدة فقط: YES أو NO."
 )
+
+
+def _verdict_relevant(raw: str) -> bool | None:
+    """Parse a YES/NO verdict (EN or AR). None means unparseable -> fail open."""
+    t = raw.strip().lower()
+    if t.startswith(("yes", "نعم")) or t.split()[:1] == ["yes"]:
+        return True
+    if t.startswith(("no", "لا", "كلا")):
+        return False
+    if "نعم" in t and "لا" not in t:
+        return True
+    if "yes" in t and "no" not in t:
+        return True
+    if "no" in t.split() or "لا" in t.split():
+        return False
+    return None
 
 
 def critic_node(state: AgentState) -> AgentState:
     ctx = "\n---\n".join(c["content"] for c in state.get("contexts", []))
-    prompt = f"Question: {state['query']}\n\nContext:\n{ctx}\n\nVerdict JSON:"
+    prompt = (f"Question: {state['query']}\n\nContext:\n{ctx}\n\n"
+              f"Is the context sufficient? Answer YES or NO:")
     raw = generate(prompt, lang=state["lang"], system=_CRITIC_SYS)
-    try:
-        verdict = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
-        state["relevant"] = bool(verdict.get("relevant"))
-        state["critique"] = verdict.get("reason", "")
-    except Exception:
-        state["relevant"] = True   # fail-open to avoid infinite loops
-        state["critique"] = "unparseable critic output; proceeding"
+    verdict = _verdict_relevant(raw)
+    state["relevant"] = True if verdict is None else verdict  # fail open
+    state["critique"] = raw.strip()[:200] or "(empty verdict; proceeding)"
     state["loops"] = state.get("loops", 0) + 1
     return state
 
@@ -79,16 +92,23 @@ def should_retry(state: AgentState) -> str:
     return "generate"
 
 
-_ANSWER_SYS = (
-    "Answer the question using ONLY the provided context. Cite the source. "
-    "If the context is insufficient, say so plainly. Reply in the question's language."
-)
+# Language-specific answer instructions. A bare "reply in the question's language"
+# hint is not reliable for Jais, so the Arabic prompt is written in Arabic and
+# explicitly demands an Arabic answer.
+_ANSWER_SYS = {
+    "en": ("Answer the question using ONLY the provided context, and cite the "
+           "source in brackets. If the context is insufficient, say so plainly. "
+           "Answer in English."),
+    "ar": ("أجب عن السؤال بالاعتماد فقط على السياق المُعطى، واذكر المصدر بين قوسين. "
+           "إذا كان السياق غير كافٍ فاذكر ذلك بوضوح. يجب أن تكون الإجابة باللغة العربية."),
+}
 
 
 def generate_node(state: AgentState) -> AgentState:
     ctx = "\n---\n".join(
         f"[{c['source']}#{c['chunk_idx']}] {c['content']}" for c in state.get("contexts", [])
     )
+    lang = state["lang"]
     prompt = f"Context:\n{ctx}\n\nQuestion: {state['query']}\n\nAnswer:"
-    state["answer"] = generate(prompt, lang=state["lang"], system=_ANSWER_SYS)
+    state["answer"] = generate(prompt, lang=lang, system=_ANSWER_SYS[lang])
     return state
