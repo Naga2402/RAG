@@ -3,288 +3,336 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>JISR — Agentic Cross-Lingual RAG</title>
+<title>JISR · Agentic RAG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0D1B2A; --bg2:#0a1622; --card:#1C3557; --card2:#16294a;
-    --teal:#00C2CB; --gold:#F4B942; --blue:#7BC8F8; --green:#2ECC71;
-    --purple:#C47BD4; --red:#E05C5C; --text:#EEF4FB; --muted:#7CA2CC;
-    --line:#24406b;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:'Segoe UI',Calibri,system-ui,sans-serif;
-    background:radial-gradient(1200px 600px at 80% -10%,#12294a 0%,var(--bg) 55%) fixed;
-    color:var(--text);min-height:100vh}
-  a{color:var(--teal)}
-  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 60px}
-  /* header */
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-  .brand{display:flex;align-items:center;gap:14px}
-  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--teal),#0a8f96);
-    display:grid;place-items:center;font-weight:800;color:#04222a;font-size:20px;box-shadow:0 6px 20px rgba(0,194,203,.35)}
-  .brand h1{margin:0;font-size:20px;letter-spacing:.3px}
-  .brand p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
-  .health{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
-    background:var(--card2);border:1px solid var(--line);padding:8px 12px;border-radius:999px}
-  .dot{width:9px;height:9px;border-radius:50%;background:#666}
-  .dot.ok{background:var(--green);box-shadow:0 0 10px var(--green)}
-  .dot.bad{background:var(--red);box-shadow:0 0 10px var(--red)}
-  /* composer */
-  .composer{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
-    border-radius:18px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
-  textarea{width:100%;min-height:66px;resize:vertical;background:#0e2036;color:var(--text);
-    border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15px;font-family:inherit;outline:none}
-  textarea:focus{border-color:var(--teal)}
-  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
-  .seg{display:flex;background:#0e2036;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .seg button{background:none;border:none;color:var(--muted);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
-  .seg button.active{background:var(--teal);color:#04222a}
-  .spacer{flex:1}
-  .ask{background:linear-gradient(135deg,var(--teal),#0a99a1);color:#04222a;border:none;font-weight:800;
-    padding:11px 26px;border-radius:10px;font-size:14px;cursor:pointer;box-shadow:0 8px 22px rgba(0,194,203,.35)}
-  .ask:disabled{opacity:.5;cursor:default}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-  .chip{background:#0e2036;border:1px solid var(--line);color:var(--muted);font-size:12px;
-    padding:7px 12px;border-radius:999px;cursor:pointer;transition:.15s}
-  .chip:hover{border-color:var(--teal);color:var(--text)}
-  .chip b{color:var(--gold)}
-  /* pipeline */
-  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 6px}
-  .node{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;position:relative;opacity:.45;transition:.3s}
-  .node.active{opacity:1;border-color:var(--teal);box-shadow:0 0 0 1px var(--teal),0 10px 26px rgba(0,0,0,.3)}
-  .node.done{opacity:1}
-  .node.skip{opacity:.25}
-  .node .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-  .node .v{font-size:15px;font-weight:700;margin-top:6px;min-height:20px}
-  .node .num{position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;
-    background:#0e2036;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted)}
-  .node.active .num,.node.done .num{background:var(--teal);color:#04222a;border-color:var(--teal)}
-  /* result */
-  .result{margin-top:18px;display:none}
-  .hint{color:var(--muted);font-size:12.5px}
-  /* difference banner */
-  .diff{border-radius:14px;padding:14px 18px;margin-bottom:16px;font-size:14.5px;line-height:1.5;
-    border:1px solid var(--line);background:var(--card2)}
-  .diff.win{border-color:var(--green);background:rgba(46,204,113,.10)}
-  .diff.warn{border-color:var(--gold);background:rgba(244,185,66,.10)}
-  .diff b{color:var(--text)}
-  .diff .lead{font-weight:800;display:block;margin-bottom:4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
-  .diff.win .lead{color:var(--green)} .diff.warn .lead{color:var(--gold)}
-  /* two columns */
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:820px){.cols{grid-template-columns:1fr}}
-  .col{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
-    border-radius:16px;padding:18px 18px 14px}
-  .col.agentic{border-color:rgba(0,194,203,.5)}
-  .colhead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-  .badge{font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px}
-  .badge.teal{background:var(--teal);color:#04222a}
-  .badge.muted{background:#2a3f63;color:var(--muted)}
-  .colnote{font-size:11.5px;color:var(--muted)}
-  .answer{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
-    border-radius:16px;padding:20px 22px}
-  .meta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
-  .tag{font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
-  .tag b{color:var(--text)}
-  .tag.green{border-color:var(--green);color:var(--green)}
-  .tag.red{border-color:var(--red);color:var(--red)}
-  .tag.gold{border-color:var(--gold);color:var(--gold)}
-  .tag.teal{border-color:var(--teal);color:var(--teal)}
-  .atext{font-size:17px;line-height:1.6;white-space:pre-wrap}
-  .atext.rtl{direction:rtl;text-align:right;font-size:19px}
-  .srch{margin:22px 0 10px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
-  .src{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px}
-  .src .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .src .name{font-size:13px;color:var(--blue);font-weight:600;word-break:break-all}
-  .src .snip{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
-  .src .snip.rtl{direction:rtl;text-align:right}
-  .bar{height:6px;width:120px;background:#0e2036;border-radius:6px;overflow:hidden;flex:none}
-  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--green))}
-  .err{background:rgba(224,92,92,.12);border:1px solid var(--red);color:#ffd7d7;padding:14px 16px;
-    border-radius:12px;margin-top:16px;font-size:14px;display:none}
-  .foot{margin-top:34px;text-align:center;color:var(--muted);font-size:12px}
-  .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:#04222a;
-    border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-3px}
-  @keyframes sp{to{transform:rotate(360deg)}}
+:root{
+  --bg:#070d18; --bg2:#0a1424; --panel:rgba(20,36,64,.55); --panel2:rgba(14,26,48,.6);
+  --stroke:rgba(123,162,204,.18); --stroke2:rgba(0,194,203,.35);
+  --teal:#00E0D0; --teal2:#00B8C4; --blue:#5B9DFF; --violet:#B57BEE; --gold:#F4B942;
+  --green:#33E29B; --red:#FF6B6B; --text:#EAF2FF; --muted:#8CA6C9; --dim:#61789e;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:'Inter','Segoe UI',system-ui,sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;z-index:0}
+.aurora{position:fixed;inset:-20%;z-index:0;filter:blur(70px);opacity:.55;pointer-events:none}
+.aurora span{position:absolute;border-radius:50%;mix-blend-mode:screen;animation:drift 22s ease-in-out infinite}
+.aurora .a{width:46vw;height:46vw;left:-6vw;top:-10vw;background:radial-gradient(circle,#00c2cb,transparent 60%)}
+.aurora .b{width:40vw;height:40vw;right:-8vw;top:6vw;background:radial-gradient(circle,#7b5bff,transparent 60%);animation-delay:-7s}
+.aurora .c{width:38vw;height:38vw;left:24vw;bottom:-16vw;background:radial-gradient(circle,#0080ff,transparent 60%);animation-delay:-13s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(6vw,4vh) scale(1.12)}66%{transform:translate(-5vw,-3vh) scale(.94)}}
+
+.app{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;max-width:1000px;margin:0 auto}
+/* ---- top bar ---- */
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;
+  backdrop-filter:blur(14px);background:linear-gradient(180deg,rgba(7,13,24,.85),rgba(7,13,24,0))}
+.brand{display:flex;align-items:center;gap:13px}
+.orb{width:42px;height:42px;border-radius:13px;position:relative;display:grid;place-items:center;
+  background:conic-gradient(from 0deg,#00e0d0,#5b9dff,#b57bee,#00e0d0);animation:spin 6s linear infinite}
+.orb::after{content:'ج';position:absolute;inset:2px;border-radius:11px;background:#0a1424;
+  display:grid;place-items:center;font-weight:800;color:#00e0d0;font-size:20px;animation:spin 6s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand h1{margin:0;font-size:16px;font-weight:700;letter-spacing:.2px}
+.brand p{margin:1px 0 0;font-size:11.5px;color:var(--muted)}
+.status{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);
+  padding:7px 13px;border:1px solid var(--stroke);border-radius:999px;background:var(--panel2);backdrop-filter:blur(8px)}
+.pulse{width:8px;height:8px;border-radius:50%;background:#556;position:relative}
+.pulse.ok{background:var(--green)}.pulse.bad{background:var(--red)}
+.pulse.ok::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--green);animation:ring 1.6s ease-out infinite}
+@keyframes ring{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+
+/* ---- chat ---- */
+.chat{flex:1;overflow-y:auto;padding:14px 22px 8px;scroll-behavior:smooth}
+.chat::-webkit-scrollbar{width:8px}.chat::-webkit-scrollbar-thumb{background:rgba(123,162,204,.2);border-radius:8px}
+.msg{display:flex;gap:12px;margin:18px 0;animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.msg .av{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:15px;font-weight:700}
+.msg.user{flex-direction:row-reverse}
+.msg.user .av{background:linear-gradient(135deg,#2a3f63,#1b2b47);color:#bcd4ff}
+.msg.ai .av{background:linear-gradient(135deg,#00e0d0,#008f96);color:#04222a;box-shadow:0 0 22px rgba(0,224,208,.45)}
+.bubble{max-width:78%;padding:13px 16px;border-radius:16px;font-size:14.5px;line-height:1.6;position:relative}
+.msg.user .bubble{background:linear-gradient(135deg,#1c65ff,#0a3fb0);color:#fff;border-bottom-right-radius:5px;
+  box-shadow:0 10px 30px rgba(28,101,255,.3)}
+.msg.ai .bubble{background:var(--panel);border:1px solid var(--stroke);border-bottom-left-radius:5px;
+  backdrop-filter:blur(16px);box-shadow:0 14px 40px rgba(0,0,0,.35);max-width:82%}
+.bubble.rtl{direction:rtl;text-align:right}
+
+/* thinking / reasoning trace */
+.trace{margin:0 0 4px;border-radius:12px;overflow:hidden}
+.trace .step{display:flex;align-items:center;gap:10px;padding:6px 2px;font-size:13px;color:var(--muted);
+  opacity:0;transform:translateX(-6px);animation:stepIn .35s ease forwards}
+@keyframes stepIn{to{opacity:1;transform:none}}
+.step .ic{width:20px;height:20px;border-radius:6px;flex:none;display:grid;place-items:center;font-size:11px;
+  background:rgba(0,224,208,.12);color:var(--teal);border:1px solid rgba(0,224,208,.25)}
+.step.done .ic{background:rgba(51,226,155,.15);color:var(--green);border-color:rgba(51,226,155,.3)}
+.step .sp{width:13px;height:13px;border:2px solid rgba(0,224,208,.25);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite}
+.step b{color:var(--text);font-weight:600}
+.trace-tag{font-size:11px;color:var(--dim);margin:2px 0 8px;letter-spacing:.4px;text-transform:uppercase;
+  display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.trace-tag .chev{transition:.2s}
+.trace.closed .step{display:none}
+.trace.closed .trace-tag .chev{transform:rotate(-90deg)}
+
+/* typing dots */
+.dots{display:inline-flex;gap:4px;padding:4px 0}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:bounce 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+.cursor{display:inline-block;width:8px;height:16px;background:var(--teal);margin-left:2px;vertical-align:-2px;
+  animation:blink 1s steps(2) infinite;border-radius:2px}
+@keyframes blink{50%{opacity:0}}
+
+.answer-text{white-space:pre-wrap}
+/* meta chips */
+.chips-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.mchip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--stroke);color:var(--muted);
+  animation:rise .4s both}
+.mchip b{color:var(--text)} .mchip.g{border-color:rgba(51,226,155,.4);color:var(--green)}
+.mchip.r{border-color:rgba(255,107,107,.4);color:var(--red)} .mchip.t{border-color:var(--stroke2);color:var(--teal)}
+.mchip.v{border-color:rgba(181,123,238,.4);color:var(--violet)}
+/* expanders */
+.exp{margin-top:12px;border:1px solid var(--stroke);border-radius:12px;overflow:hidden;background:var(--panel2)}
+.exp>summary{list-style:none;cursor:pointer;padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--muted);
+  display:flex;align-items:center;gap:8px}
+.exp>summary::-webkit-details-marker{display:none}
+.exp[open]>summary{color:var(--text);border-bottom:1px solid var(--stroke)}
+.exp .body{padding:12px 14px}
+.src{padding:9px 0;border-bottom:1px dashed var(--stroke)}.src:last-child{border:0}
+.src .top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.src .name{font-size:12px;color:var(--blue);font-family:'JetBrains Mono',monospace;word-break:break-all}
+.src .snip{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.5}.src .snip.rtl{direction:rtl;text-align:right}
+.bar{width:88px;height:5px;border-radius:5px;background:rgba(255,255,255,.08);flex:none;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--green))}
+/* naive compare */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.vs{grid-template-columns:1fr}}
+.vs .card{border:1px solid var(--stroke);border-radius:10px;padding:11px 13px;background:rgba(10,20,36,.5)}
+.vs .card.a{border-color:var(--stroke2)}
+.vs h4{margin:0 0 7px;font-size:11px;letter-spacing:.4px;text-transform:uppercase}
+.vs .a h4{color:var(--teal)} .vs .n h4{color:var(--muted)}
+.vs p{margin:0;font-size:13px;line-height:1.5}.vs p.rtl{direction:rtl;text-align:right}
+.insight{margin-top:10px;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.55;
+  border:1px solid rgba(51,226,155,.35);background:rgba(51,226,155,.08)}
+.insight.warn{border-color:rgba(244,185,66,.35);background:rgba(244,185,66,.08)}
+.insight b{color:var(--text)}.insight .l{display:block;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;color:var(--green)}
+.insight.warn .l{color:var(--gold)}
+
+/* ---- composer ---- */
+.composer{padding:12px 22px 20px;background:linear-gradient(0deg,rgba(7,13,24,.92),rgba(7,13,24,0))}
+.suggest{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.suggest::-webkit-scrollbar{display:none}
+.sg{flex:none;font-size:12px;color:var(--muted);border:1px solid var(--stroke);background:var(--panel2);
+  padding:7px 13px;border-radius:999px;cursor:pointer;transition:.2s;white-space:nowrap;backdrop-filter:blur(8px)}
+.sg:hover{border-color:var(--stroke2);color:var(--text);transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,224,208,.15)}
+.sg b{color:var(--gold)}
+.inputwrap{display:flex;align-items:flex-end;gap:10px;padding:9px 9px 9px 16px;border-radius:18px;
+  border:1px solid var(--stroke);background:var(--panel);backdrop-filter:blur(16px);
+  box-shadow:0 12px 40px rgba(0,0,0,.4);transition:.25s}
+.inputwrap.focus{border-color:var(--stroke2);box-shadow:0 12px 46px rgba(0,224,208,.18)}
+#q{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:15px;
+  resize:none;max-height:120px;line-height:1.5;padding:6px 0}
+#q::placeholder{color:var(--dim)}
+.send{width:44px;height:44px;flex:none;border:none;border-radius:13px;cursor:pointer;position:relative;
+  background:linear-gradient(135deg,#00e0d0,#0090c8);display:grid;place-items:center;
+  box-shadow:0 8px 24px rgba(0,224,208,.4);transition:.2s}
+.send:hover{transform:translateY(-1px) scale(1.03)}
+.send:disabled{opacity:.5;cursor:default;transform:none}
+.send svg{width:20px;height:20px;fill:#04222a}
+.send.busy{background:#1b2b47}
+.hint{text-align:center;font-size:10.5px;color:var(--dim);margin-top:9px}
+kbd{font-family:inherit;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:5px;border:1px solid var(--stroke)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
+<canvas id="bg"></canvas>
+<div class="aurora"><span class="a"></span><span class="b"></span><span class="c"></span></div>
+
+<div class="app">
+  <div class="top">
     <div class="brand">
-      <div class="logo">ج</div>
-      <div>
-        <h1>JISR &nbsp;·&nbsp; Agentic Cross-Lingual RAG</h1>
-        <p>Self-correcting retrieval over Arabic &amp; English — running locally</p>
-      </div>
+      <div class="orb"></div>
+      <div><h1>JISR</h1><p>Agentic Cross-Lingual RAG · Arabic &amp; English</p></div>
     </div>
-    <div class="health"><span class="dot" id="dot"></span><span id="healthTxt">checking…</span></div>
-  </header>
+    <div class="status"><span class="pulse" id="pulse"></span><span id="statusTxt">connecting…</span></div>
+  </div>
+
+  <div class="chat" id="chat"></div>
 
   <div class="composer">
-    <textarea id="q" placeholder="Ask a question about the documents — in English or Arabic…"></textarea>
-    <div class="row">
-      <div class="hint">One click runs <b style="color:var(--teal)">both</b> pipelines — Agentic (with Critic) and Naive RAG — and shows the difference.</div>
-      <div class="spacer"></div>
-      <button class="ask" id="ask">Ask JISR</button>
+    <div class="suggest" id="suggest">
+      <div class="sg" data-q="What is the warranty period for the X200 pump?"><b>EN</b> · pump warranty</div>
+      <div class="sg" data-q="ما هي شروط الدفع في عقد الخدمة؟"><b>AR</b> · شروط الدفع</div>
+      <div class="sg" data-q="What are the payment terms in the service agreement?"><b>EN</b> · payment terms</div>
+      <div class="sg" data-q="ما هي مدة ضمان المضخة الصناعية X200؟"><b>AR</b> · مدة الضمان</div>
+      <div class="sg" data-q="What is the CEO's annual salary and stock options?"><b>Test</b> · out-of-scope</div>
     </div>
-    <div class="chips" id="chips">
-      <div class="chip" data-q="What is the warranty period for the X200 pump?"><b>EN</b> &nbsp;pump warranty period</div>
-      <div class="chip" data-q="ما هي شروط الدفع في عقد الخدمة؟"><b>AR</b> &nbsp;شروط الدفع في العقد</div>
-      <div class="chip" data-q="What are the payment terms in the service agreement?"><b>EN</b> &nbsp;payment terms</div>
-      <div class="chip" data-q="What is the CEO's annual salary and stock options?"><b>Test</b> &nbsp;out-of-scope (should refuse)</div>
+    <div class="inputwrap" id="iw">
+      <textarea id="q" rows="1" placeholder="Ask JISR anything about your documents — in English or Arabic…"></textarea>
+      <button class="send" id="send" title="Send (Enter)">
+        <svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>
+      </button>
     </div>
+    <div class="hint">Each message runs the <b style="color:var(--teal)">Agentic</b> pipeline &amp; a <b>Naive</b> baseline · <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> newline</div>
   </div>
-
-  <div class="pipe" id="pipe">
-    <div class="node" id="n1"><div class="num">1</div><div class="k">Router</div><div class="v" id="v1">—</div></div>
-    <div class="node" id="n2"><div class="num">2</div><div class="k">Retrieve</div><div class="v" id="v2">—</div></div>
-    <div class="node" id="n3"><div class="num">3</div><div class="k">Critic</div><div class="v" id="v3">—</div></div>
-    <div class="node" id="n4"><div class="num">4</div><div class="k">Generate</div><div class="v" id="v4">—</div></div>
-  </div>
-
-  <div class="err" id="err"></div>
-
-  <div class="result" id="result">
-    <div class="diff" id="diff"></div>
-    <div class="cols">
-      <div class="col agentic">
-        <div class="colhead"><span class="badge teal">Agentic + Critic</span>
-          <span class="colnote">verifies context, retries, then answers</span></div>
-        <div class="meta" id="ag_meta"></div>
-        <div class="atext" id="ag_answer"></div>
-        <div class="srch">Retrieved sources</div>
-        <div id="ag_sources"></div>
-      </div>
-      <div class="col naive">
-        <div class="colhead"><span class="badge muted">Naive RAG</span>
-          <span class="colnote">retrieve once, answer — no Critic</span></div>
-        <div class="meta" id="nv_meta"></div>
-        <div class="atext" id="nv_answer"></div>
-        <div class="srch">Retrieved sources</div>
-        <div id="nv_sources"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="foot">JISR &nbsp;·&nbsp; VN Sanjay &nbsp;·&nbsp; 2024AA05123 &nbsp;·&nbsp; M.Tech Dissertation, BITS Pilani</div>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-const isRTL = t => /[؀-ۿ]/.test(t||"");
-const criticNo = c => /^(no|لا|كلا)/i.test((c||'').trim());
-
-document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{ $('q').value=c.dataset.q; });
-$('ask').onclick = run;
-$('q').addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) run(); });
-
-async function health(){
-  try{
-    const r = await fetch('/api/health'); const j = await r.json();
-    $('dot').className='dot ok';
-    $('healthTxt').textContent = 'AR: '+j.models.ar+'  ·  EN: '+j.models.en;
-  }catch(e){ $('dot').className='dot bad'; $('healthTxt').textContent='backend offline'; }
-}
-health();
-
-function resetPipe(){ for(let i=1;i<=4;i++){ $('n'+i).className='node'; $('v'+i).textContent='—'; } }
-function light(i,val){ const n=$('n'+i); n.classList.add('active'); if(val!=null)$('v'+i).textContent=val; }
-function done(i){ const n=$('n'+i); n.classList.remove('active'); n.classList.add('done'); }
+const $=s=>document.querySelector(s), chat=$('#chat');
+const isRTL=t=>/[؀-ۿ]/.test(t||'');
+const criticNo=c=>/^(no|لا|كلا)/i.test((c||'').trim());
+const refusal=a=>/cannot|can't|not available|does not|doesn't|no information|unable|not (?:mention|provide|contain|specif)|insufficient|لا (?:يوجد|يمكن|تتوفر|يحتوي)|غير (?:متوف|كاف)|لا يمكن/i.test(a||'');
+const esc=s=>(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-async function run(){
-  const query = $('q').value.trim();
-  if(!query) return;
-  $('err').style.display='none'; $('result').style.display='none';
-  $('ask').disabled=true; $('ask').innerHTML='<span class="spin"></span> Running both';
-  resetPipe();
+/* ---------- particle background ---------- */
+const cv=$('#bg'),cx=cv.getContext('2d');let W,H,dots=[];
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+  dots=Array.from({length:Math.min(70,Math.floor(W/22))},()=>({x:Math.random()*W,y:Math.random()*H,
+    r:Math.random()*1.7+.4,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,a:Math.random()*.5+.15}));}
+resize();addEventListener('resize',resize);
+(function loop(){cx.clearRect(0,0,W,H);
+  for(const d of dots){d.x+=d.vx;d.y+=d.vy;if(d.x<0||d.x>W)d.vx*=-1;if(d.y<0||d.y>H)d.vy*=-1;
+    cx.beginPath();cx.arc(d.x,d.y,d.r,0,7);cx.fillStyle='rgba(0,224,208,'+d.a+')';cx.fill();}
+  for(let i=0;i<dots.length;i++)for(let j=i+1;j<dots.length;j++){const a=dots[i],b=dots[j],
+    dx=a.x-b.x,dy=a.y-b.y,dl=Math.hypot(dx,dy);if(dl<120){cx.strokeStyle='rgba(91,157,255,'+(.10*(1-dl/120))+')';
+    cx.lineWidth=1;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();}}
+  requestAnimationFrame(loop);})();
 
-  // animate the agentic pipeline while both requests run on the server
-  const lang = isRTL(query) ? 'ar' : 'en';
-  await sleep(150); light(1, lang.toUpperCase()); await sleep(300); done(1);
-  light(2,'searching…');
+/* ---------- health ---------- */
+(async()=>{try{const j=await(await fetch('/api/health')).json();
+  $('#pulse').className='pulse ok';$('#statusTxt').textContent='online · AR '+j.models.ar+' · EN '+j.models.en;}
+  catch(e){$('#pulse').className='pulse bad';$('#statusTxt').textContent='backend offline';}})();
 
-  let data;
-  try{
-    const r = await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({query})});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    data = await r.json();
-  }catch(e){
-    $('err').style.display='block';
-    $('err').textContent='Could not reach the JISR backend. Start it from the jisr-rag folder:  .venv\\Scripts\\python.exe -m uvicorn serve:app --port 8000  (with Ollama + the pgvector container running).';
-    $('ask').disabled=false; $('ask').textContent='Ask JISR'; return;
-  }
+/* ---------- composer behaviour ---------- */
+const q=$('#q'),iw=$('#iw');
+q.addEventListener('input',()=>{q.style.height='auto';q.style.height=Math.min(120,q.scrollHeight)+'px';});
+q.addEventListener('focus',()=>iw.classList.add('focus'));
+q.addEventListener('blur',()=>iw.classList.remove('focus'));
+q.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask();}});
+$('#send').onclick=ask;
+document.querySelectorAll('.sg').forEach(s=>s.onclick=()=>{q.value=s.dataset.q;q.focus();q.dispatchEvent(new Event('input'));});
 
-  const ag = data.agentic, nv = data.naive;
-  done(1); $('v1').textContent=(ag.lang||lang).toUpperCase();
-  light(2, ag.contexts.length+' passages'); await sleep(300); done(2);
-  light(3, criticNo(ag.critic)?'NO — retry':'YES'); await sleep(350); done(3);
-  light(4,'writing…'); await sleep(250); done(4); $('v4').textContent='answer ✓';
+/* ---------- welcome ---------- */
+addAI().then(node=>{
+  node.querySelector('.slot').innerHTML=
+   `<div class="answer-text">Hi 👋 I'm <b>JISR</b> — an agentic retrieval assistant for your Arabic &amp; English documents.`
+   +` Ask me something and watch me <b>reason</b>: I detect the language, search the right index, <b>verify</b> the`
+   +` context with a Critic, and only then answer — with sources. I'll also show a <b>Naive RAG</b> baseline so you can see the difference.</div>`;
+});
 
-  renderColumn('ag', ag);
-  renderColumn('nv', nv);
-  renderDiff(ag, nv);
+let busy=false;
+function scroll(){chat.scrollTop=chat.scrollHeight;}
 
-  $('result').style.display='block';
-  $('result').scrollIntoView({behavior:'smooth',block:'nearest'});
-  $('ask').disabled=false; $('ask').textContent='Ask JISR';
+function addUser(text){
+  const m=document.createElement('div');m.className='msg user';
+  m.innerHTML=`<div class="av">You</div><div class="bubble${isRTL(text)?' rtl':''}">${esc(text)}</div>`;
+  chat.appendChild(m);scroll();
+}
+async function addAI(){
+  const m=document.createElement('div');m.className='msg ai';
+  m.innerHTML=`<div class="av">ج</div><div class="bubble"><div class="slot"><div class="dots"><i></i><i></i><i></i></div></div></div>`;
+  chat.appendChild(m);scroll();await sleep(30);return m;
 }
 
-function renderColumn(pfx, d){
-  const rtl = isRTL(d.answer) || d.lang==='ar';
-  const meta=[];
-  meta.push(`<span class="tag teal">Lang <b>${(d.lang||'').toUpperCase()}</b></span>`);
-  if(d.loops!=null) meta.push(`<span class="tag">Reflections <b>${d.loops}</b></span>`);
-  if(d.critic!=null){
-    const no=criticNo(d.critic);
-    meta.push(`<span class="tag ${no?'red':'green'}">Critic <b>${no?'insufficient':'sufficient'}</b></span>`);
-  }
-  meta.push(`<span class="tag">Latency <b>${d.elapsed_ms} ms</b></span>`);
-  $(pfx+'_meta').innerHTML = meta.join('');
-  const a=$(pfx+'_answer'); a.className='atext'+(rtl?' rtl':''); a.textContent=d.answer||'(no answer)';
-  $(pfx+'_sources').innerHTML = (d.contexts||[]).map(c=>{
-    const r=isRTL(c.snippet);
-    return `<div class="src"><div class="top">
-      <div class="name">${escapeHtml(c.source)} &nbsp;#${c.chunk_idx}</div>
-      <div class="bar"><i style="width:${Math.max(6,Math.min(100,c.score*100))}%"></i></div>
-    </div><div class="snip${r?' rtl':''}">${escapeHtml(c.snippet)}</div></div>`;
-  }).join('') || '<div class="src"><div class="snip">No passages retrieved.</div></div>';
+const STEPS=[
+  {t:'Understanding the question'},
+  {t:'Routing to the {LANG} knowledge base'},
+  {t:'Searching documents'},
+  {t:'Verifying context with the Critic'},
+  {t:'Composing a grounded answer'},
+];
+
+async function ask(){
+  const query=q.value.trim();if(!query||busy)return;busy=true;
+  const send=$('#send');send.classList.add('busy');send.disabled=true;
+  addUser(query);q.value='';q.style.height='auto';
+  const node=await addAI();const slot=node.querySelector('.slot');
+  const lang=isRTL(query)?'ar':'en';
+
+  // fire the real request immediately
+  const pReq=fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query})}).then(r=>{if(!r.ok)throw 0;return r.json()}).catch(()=>null);
+
+  // build reasoning trace
+  slot.innerHTML=`<div class="trace" id="tr"><div class="trace-tag"><span class="chev">▾</span> Agent reasoning</div></div>`;
+  const tr=slot.querySelector('#tr');
+  tr.querySelector('.trace-tag').onclick=()=>tr.classList.toggle('closed');
+  const mkStep=(txt)=>{const el=document.createElement('div');el.className='step';
+    el.innerHTML=`<span class="sp"></span><span class="tx">${txt}</span>`;tr.appendChild(el);scroll();return el;};
+  const finish=(el,txt)=>{el.classList.add('done');el.querySelector('.sp').outerHTML='<span class="ic">✓</span>';
+    if(txt)el.querySelector('.tx').innerHTML=txt;};
+
+  let s;
+  s=mkStep(STEPS[0].t);await sleep(520);finish(s,`Detected <b>${lang==='ar'?'Arabic':'English'}</b>`);
+  s=mkStep(STEPS[1].t.replace('{LANG}',lang==='ar'?'Arabic':'English'));await sleep(480);
+    finish(s,`Routed to the <b>${lang.toUpperCase()}</b> index`);
+  s=mkStep(STEPS[2].t);
+  const data=await pReq;                                   // wait for backend here
+  if(!data){finish(s,'—');fail(slot);done(send);return;}
+  const ag=data.agentic,nv=data.naive;
+  await sleep(200);finish(s,`Retrieved <b>${ag.contexts.length}</b> candidate passages`);
+  s=mkStep(STEPS[3].t);await sleep(560);
+  const no=criticNo(ag.critic);
+  finish(s,no?`Critic: context <b>insufficient</b> → re-retrieved (${ag.loops} loops)`:`Critic: context <b>sufficient</b> ✓`);
+  s=mkStep(STEPS[4].t);await sleep(360);finish(s,'Answer ready');
+  await sleep(150);tr.classList.add('closed');           // collapse the trace
+
+  // stream the answer
+  const at=document.createElement('div');at.className='answer-text'+(isRTL(ag.answer)?' rtl':'');
+  slot.appendChild(at);
+  await typewriter(at,ag.answer||'(no answer)');
+
+  // meta chips + expanders
+  const meta=document.createElement('div');meta.className='chips-row';
+  meta.innerHTML=chip('t','Language',(ag.lang||lang).toUpperCase())
+    +chip(no?'r':'g','Critic',no?'insufficient':'sufficient')
+    +chip('','Reflections',ag.loops)
+    +chip('v','Latency',ag.elapsed_ms+' ms');
+  slot.appendChild(meta);
+  slot.appendChild(sourcesEl(ag.contexts));
+  slot.appendChild(compareEl(ag,nv));
+  scroll();done(send);
 }
+function done(send){send.classList.remove('busy');send.disabled=false;busy=false;q.focus();}
+function fail(slot){slot.innerHTML='<div class="answer-text" style="color:var(--red)">Couldn\'t reach the backend. Start it from <code>jisr-rag</code>: <code>.venv\\Scripts\\python.exe -m uvicorn serve:app --port 8000</code> (with Ollama + the pgvector container running).</div>';}
+function chip(cls,k,v){return `<span class="mchip ${cls}">${k} <b>${v}</b></span>`;}
 
-const isRefusal = a => /cannot|can't|not available|does not|doesn't|no information|unable|not (?:mention|provide|contain|specif)|insufficient|لا (?:يوجد|يمكن|تتوفر|يحتوي)|غير (?:متوف|كاف)|لا يمكن/i.test(a||'');
-
-function renderDiff(ag, nv){
-  const el=$('diff');
-  const criticSaysNo = criticNo(ag.critic);
-  const agRef = isRefusal(ag.answer), nvRef = isRefusal(nv.answer);
-  let cls, lead, body;
-
-  if(criticSaysNo && !nvRef){
-    // strongest case: agent caught it, naive answered anyway
-    cls='win'; lead='The Critic caught what Naive missed';
-    body=`The retrieved context did <b>not</b> contain the answer. The <b>Agentic</b> pipeline detected this`
-        +` (Critic: <b>insufficient</b>, ${ag.loops} reflection loop(s)) and declined to guess, while the`
-        +` <b>Naive</b> pipeline had no verification step and answered anyway — exactly how one-shot RAG hallucinates.`;
-  } else if(criticSaysNo && nvRef){
-    // both declined, but by different mechanisms
-    cls='warn'; lead='Both declined — but only one verified';
-    body=`Neither answered, which is correct here. The difference is <b>how</b>: the <b>Agentic</b> pipeline`
-        +` reached it deliberately — the Critic judged the context <b>insufficient</b> and re-retrieved`
-        +` (${ag.loops} loop(s)) before giving up. The <b>Naive</b> pipeline has no such safeguard; it only`
-        +` declined because the model happened to be cautious, and on harder queries that is where it hallucinates.`;
-  } else {
-    // context sufficient, both answered
-    cls='win'; lead='Both answered — only one verified first';
-    body=`The context was sufficient, so both replied. The difference is trust: the <b>Agentic</b> pipeline`
-        +` <b>verified</b> the context with the Critic (<b>sufficient</b>) before answering; the <b>Naive</b>`
-        +` pipeline answered without checking. Cost of that safety check: ${ag.elapsed_ms} ms vs ${nv.elapsed_ms} ms.`;
-  }
-  el.className='diff '+cls;
-  el.innerHTML=`<span class="lead">${lead}</span>${body}`;
+async function typewriter(el,text){
+  el.innerHTML='<span class="body"></span><span class="cursor"></span>';
+  const body=el.querySelector('.body');const step=Math.max(1,Math.round(text.length/220));
+  for(let i=0;i<text.length;i+=step){body.textContent=text.slice(0,i+step);if(i%9===0)scroll();await sleep(12);}
+  body.textContent=text;el.querySelector('.cursor').remove();scroll();
 }
-function escapeHtml(s){return (s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function sourcesEl(ctx){
+  const d=document.createElement('details');d.className='exp';
+  d.innerHTML=`<summary>📄 ${ctx.length} retrieved source${ctx.length!==1?'s':''}</summary><div class="body">`+
+    (ctx.map(c=>`<div class="src"><div class="top"><span class="name">${esc(c.source)} #${c.chunk_idx}</span>
+      <span class="bar"><i style="width:${Math.max(6,Math.min(100,c.score*100))}%"></i></span></div>
+      <div class="snip${isRTL(c.snippet)?' rtl':''}">${esc(c.snippet)}</div></div>`).join('')||'<div class="snip">none</div>')
+    +`</div>`;
+  return d;
+}
+function compareEl(ag,nv){
+  const d=document.createElement('details');d.className='exp';
+  const no=criticNo(ag.critic),nvRef=refusal(nv.answer);
+  let cls,lead,body;
+  if(no&&!nvRef){cls='';lead='The Critic caught what Naive missed';
+    body=`The context did <b>not</b> contain the answer. Agentic detected this (Critic insufficient, ${ag.loops} loop(s)) and declined; Naive had no verification and answered anyway — how one-shot RAG hallucinates.`;}
+  else if(no&&nvRef){cls='warn';lead='Both declined — but only one verified';
+    body=`Neither answered, which is correct. Agentic reached it deliberately (Critic re-retrieved, ${ag.loops} loop(s)); Naive only declined because the model happened to be cautious — with no safeguard it's the path prone to hallucinate.`;}
+  else{cls='';lead='Both answered — only one verified first';
+    body=`Context was sufficient, so both replied. Agentic <b>verified</b> with the Critic before answering; Naive answered without checking. Safety-check cost: ${ag.elapsed_ms} ms vs ${nv.elapsed_ms} ms.`;}
+  d.innerHTML=`<summary>⚖️ Compare with Naive RAG</summary><div class="body">
+    <div class="vs">
+      <div class="card a"><h4>Agentic + Critic</h4><p class="${isRTL(ag.answer)?'rtl':''}">${esc(ag.answer)}</p></div>
+      <div class="card n"><h4>Naive RAG</h4><p class="${isRTL(nv.answer)?'rtl':''}">${esc(nv.answer)}</p></div>
+    </div>
+    <div class="insight ${cls}"><span class="l">${lead}</span>${body}</div></div>`;
+  return d;
+}
 </script>
 </body>
 </html>
