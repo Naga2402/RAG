@@ -60,22 +60,35 @@ def health():
     return info
 
 
-@app.post("/api/ask")
-def ask(req: AskRequest):
+def _run(mode: str, query: str) -> dict:
     t0 = time.perf_counter()
-    if req.mode == "naive":
-        r = naive_answer(req.query)
+    if mode == "naive":
+        r = naive_answer(query)
         payload = {"mode": "naive", "lang": r["lang"], "loops": None,
                    "critic": None, "answer": r["answer"],
                    "contexts": _fmt_contexts(r["contexts"])}
     else:
-        st = agentic_answer(req.query)
+        st = agentic_answer(query)
         payload = {"mode": "agentic", "lang": st.get("lang"),
                    "loops": st.get("loops"), "critic": (st.get("critique") or "").strip(),
                    "answer": st.get("answer", ""),
                    "contexts": _fmt_contexts(st.get("contexts"))}
     payload["elapsed_ms"] = int((time.perf_counter() - t0) * 1000)
     return payload
+
+
+@app.post("/api/ask")
+def ask(req: AskRequest):
+    return _run(req.mode, req.query)
+
+
+@app.post("/api/compare")
+def compare(req: AskRequest):
+    """Run BOTH pipelines on the same query so the UI can show the difference the
+    agentic Critic makes. Agentic first (so the Arabic model stays warm for naive)."""
+    agentic = _run("agentic", req.query)
+    naive = _run("naive", req.query)
+    return {"query": req.query, "agentic": agentic, "naive": naive}
 
 
 @app.get("/")

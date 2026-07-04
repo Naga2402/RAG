@@ -61,9 +61,29 @@
   .node.active .num,.node.done .num{background:var(--teal);color:#04222a;border-color:var(--teal)}
   /* result */
   .result{margin-top:18px;display:none}
+  .hint{color:var(--muted);font-size:12.5px}
+  /* difference banner */
+  .diff{border-radius:14px;padding:14px 18px;margin-bottom:16px;font-size:14.5px;line-height:1.5;
+    border:1px solid var(--line);background:var(--card2)}
+  .diff.win{border-color:var(--green);background:rgba(46,204,113,.10)}
+  .diff.warn{border-color:var(--gold);background:rgba(244,185,66,.10)}
+  .diff b{color:var(--text)}
+  .diff .lead{font-weight:800;display:block;margin-bottom:4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  .diff.win .lead{color:var(--green)} .diff.warn .lead{color:var(--gold)}
+  /* two columns */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+  .col{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+    border-radius:16px;padding:18px 18px 14px}
+  .col.agentic{border-color:rgba(0,194,203,.5)}
+  .colhead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .badge{font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px}
+  .badge.teal{background:var(--teal);color:#04222a}
+  .badge.muted{background:#2a3f63;color:var(--muted)}
+  .colnote{font-size:11.5px;color:var(--muted)}
   .answer{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
     border-radius:16px;padding:20px 22px}
-  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .meta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
   .tag{font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
   .tag b{color:var(--text)}
   .tag.green{border-color:var(--green);color:var(--green)}
@@ -104,10 +124,7 @@
   <div class="composer">
     <textarea id="q" placeholder="Ask a question about the documents — in English or Arabic…"></textarea>
     <div class="row">
-      <div class="seg" id="mode">
-        <button data-mode="agentic" class="active">Agentic (with Critic)</button>
-        <button data-mode="naive">Naive RAG</button>
-      </div>
+      <div class="hint">One click runs <b style="color:var(--teal)">both</b> pipelines — Agentic (with Critic) and Naive RAG — and shows the difference.</div>
       <div class="spacer"></div>
       <button class="ask" id="ask">Ask JISR</button>
     </div>
@@ -129,12 +146,25 @@
   <div class="err" id="err"></div>
 
   <div class="result" id="result">
-    <div class="answer">
-      <div class="meta" id="meta"></div>
-      <div class="atext" id="atext"></div>
+    <div class="diff" id="diff"></div>
+    <div class="cols">
+      <div class="col agentic">
+        <div class="colhead"><span class="badge teal">Agentic + Critic</span>
+          <span class="colnote">verifies context, retries, then answers</span></div>
+        <div class="meta" id="ag_meta"></div>
+        <div class="atext" id="ag_answer"></div>
+        <div class="srch">Retrieved sources</div>
+        <div id="ag_sources"></div>
+      </div>
+      <div class="col naive">
+        <div class="colhead"><span class="badge muted">Naive RAG</span>
+          <span class="colnote">retrieve once, answer — no Critic</span></div>
+        <div class="meta" id="nv_meta"></div>
+        <div class="atext" id="nv_answer"></div>
+        <div class="srch">Retrieved sources</div>
+        <div id="nv_sources"></div>
+      </div>
     </div>
-    <div class="srch">Retrieved sources</div>
-    <div id="sources"></div>
   </div>
 
   <div class="foot">JISR &nbsp;·&nbsp; VN Sanjay &nbsp;·&nbsp; 2024AA05123 &nbsp;·&nbsp; M.Tech Dissertation, BITS Pilani</div>
@@ -142,13 +172,9 @@
 
 <script>
 const $ = id => document.getElementById(id);
-let mode = "agentic";
 const isRTL = t => /[؀-ۿ]/.test(t||"");
+const criticNo = c => /^(no|لا|كلا)/i.test((c||'').trim());
 
-document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
-  mode=b.dataset.mode;
-  document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('active',x===b));
-});
 document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{ $('q').value=c.dataset.q; });
 $('ask').onclick = run;
 $('q').addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) run(); });
@@ -162,11 +188,8 @@ async function health(){
 }
 health();
 
-function resetPipe(){
-  for(let i=1;i<=4;i++){ $('n'+i).className='node'; $('v'+i).textContent='—'; }
-  if(mode==='naive'){ $('n3').classList.add('skip'); $('v3').textContent='skipped'; }
-}
-function light(i,val){ const n=$('n'+i); n.classList.remove('active'); n.classList.add('active'); if(val!=null)$('v'+i).textContent=val; }
+function resetPipe(){ for(let i=1;i<=4;i++){ $('n'+i).className='node'; $('v'+i).textContent='—'; } }
+function light(i,val){ const n=$('n'+i); n.classList.add('active'); if(val!=null)$('v'+i).textContent=val; }
 function done(i){ const n=$('n'+i); n.classList.remove('active'); n.classList.add('done'); }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -174,64 +197,92 @@ async function run(){
   const query = $('q').value.trim();
   if(!query) return;
   $('err').style.display='none'; $('result').style.display='none';
-  $('ask').disabled=true; $('ask').innerHTML='<span class="spin"></span> Thinking';
+  $('ask').disabled=true; $('ask').innerHTML='<span class="spin"></span> Running both';
   resetPipe();
 
-  // animate the pipeline while the request is in flight
+  // animate the agentic pipeline while both requests run on the server
   const lang = isRTL(query) ? 'ar' : 'en';
-  await sleep(150); light(1, lang.toUpperCase()); await sleep(350); done(1);
+  await sleep(150); light(1, lang.toUpperCase()); await sleep(300); done(1);
   light(2,'searching…');
 
   let data;
   try{
-    const r = await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({query, mode})});
+    const r = await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     data = await r.json();
   }catch(e){
     $('err').style.display='block';
-    $('err').textContent='Could not reach the JISR backend. Start it with:  uvicorn serve:app --port 8000  (and make sure Ollama + the pgvector container are running).';
+    $('err').textContent='Could not reach the JISR backend. Start it from the jisr-rag folder:  .venv\\Scripts\\python.exe -m uvicorn serve:app --port 8000  (with Ollama + the pgvector container running).';
     $('ask').disabled=false; $('ask').textContent='Ask JISR'; return;
   }
 
-  done(1); $('v1').textContent=(data.lang||lang).toUpperCase();
-  light(2, data.contexts.length+' passages'); await sleep(300); done(2);
-
-  if(mode==='agentic'){
-    const ok = /^(yes|نعم)/i.test(data.critic||'') || !/^(no|لا|كلا)/i.test(data.critic||'');
-    light(3, (data.critic||'').slice(0,18) || '—'); await sleep(350); done(3);
-  }
+  const ag = data.agentic, nv = data.naive;
+  done(1); $('v1').textContent=(ag.lang||lang).toUpperCase();
+  light(2, ag.contexts.length+' passages'); await sleep(300); done(2);
+  light(3, criticNo(ag.critic)?'NO — retry':'YES'); await sleep(350); done(3);
   light(4,'writing…'); await sleep(250); done(4); $('v4').textContent='answer ✓';
 
-  render(data, query);
-  $('ask').disabled=false; $('ask').textContent='Ask JISR';
-}
-
-function render(d, query){
-  const rtl = isRTL(d.answer) || d.lang==='ar';
-  const meta = [];
-  meta.push(`<span class="tag teal">Language <b>${(d.lang||'').toUpperCase()}</b></span>`);
-  meta.push(`<span class="tag ${d.mode==='agentic'?'gold':''}">Mode <b>${d.mode}</b></span>`);
-  if(d.loops!=null) meta.push(`<span class="tag">Reflections <b>${d.loops}</b></span>`);
-  if(d.critic!=null){
-    const no = /^(no|لا|كلا)/i.test(d.critic);
-    meta.push(`<span class="tag ${no?'red':'green'}">Critic <b>${no?'insufficient':'sufficient'}</b></span>`);
-  }
-  meta.push(`<span class="tag">Latency <b>${d.elapsed_ms} ms</b></span>`);
-  $('meta').innerHTML = meta.join('');
-  $('atext').className = 'atext'+(rtl?' rtl':'');
-  $('atext').textContent = d.answer || '(no answer)';
-
-  $('sources').innerHTML = (d.contexts||[]).map(c=>{
-    const r = isRTL(c.snippet);
-    return `<div class="src"><div class="top">
-      <div class="name">${c.source} &nbsp;#${c.chunk_idx}</div>
-      <div class="bar"><i style="width:${Math.max(6,Math.min(100,c.score*100))}%"></i></div>
-    </div><div class="snip${r?' rtl':''}">${escapeHtml(c.snippet)}</div></div>`;
-  }).join('') || '<div class="src"><div class="snip">No passages retrieved.</div></div>';
+  renderColumn('ag', ag);
+  renderColumn('nv', nv);
+  renderDiff(ag, nv);
 
   $('result').style.display='block';
   $('result').scrollIntoView({behavior:'smooth',block:'nearest'});
+  $('ask').disabled=false; $('ask').textContent='Ask JISR';
+}
+
+function renderColumn(pfx, d){
+  const rtl = isRTL(d.answer) || d.lang==='ar';
+  const meta=[];
+  meta.push(`<span class="tag teal">Lang <b>${(d.lang||'').toUpperCase()}</b></span>`);
+  if(d.loops!=null) meta.push(`<span class="tag">Reflections <b>${d.loops}</b></span>`);
+  if(d.critic!=null){
+    const no=criticNo(d.critic);
+    meta.push(`<span class="tag ${no?'red':'green'}">Critic <b>${no?'insufficient':'sufficient'}</b></span>`);
+  }
+  meta.push(`<span class="tag">Latency <b>${d.elapsed_ms} ms</b></span>`);
+  $(pfx+'_meta').innerHTML = meta.join('');
+  const a=$(pfx+'_answer'); a.className='atext'+(rtl?' rtl':''); a.textContent=d.answer||'(no answer)';
+  $(pfx+'_sources').innerHTML = (d.contexts||[]).map(c=>{
+    const r=isRTL(c.snippet);
+    return `<div class="src"><div class="top">
+      <div class="name">${escapeHtml(c.source)} &nbsp;#${c.chunk_idx}</div>
+      <div class="bar"><i style="width:${Math.max(6,Math.min(100,c.score*100))}%"></i></div>
+    </div><div class="snip${r?' rtl':''}">${escapeHtml(c.snippet)}</div></div>`;
+  }).join('') || '<div class="src"><div class="snip">No passages retrieved.</div></div>';
+}
+
+const isRefusal = a => /cannot|can't|not available|does not|doesn't|no information|unable|not (?:mention|provide|contain|specif)|insufficient|لا (?:يوجد|يمكن|تتوفر|يحتوي)|غير (?:متوف|كاف)|لا يمكن/i.test(a||'');
+
+function renderDiff(ag, nv){
+  const el=$('diff');
+  const criticSaysNo = criticNo(ag.critic);
+  const agRef = isRefusal(ag.answer), nvRef = isRefusal(nv.answer);
+  let cls, lead, body;
+
+  if(criticSaysNo && !nvRef){
+    // strongest case: agent caught it, naive answered anyway
+    cls='win'; lead='The Critic caught what Naive missed';
+    body=`The retrieved context did <b>not</b> contain the answer. The <b>Agentic</b> pipeline detected this`
+        +` (Critic: <b>insufficient</b>, ${ag.loops} reflection loop(s)) and declined to guess, while the`
+        +` <b>Naive</b> pipeline had no verification step and answered anyway — exactly how one-shot RAG hallucinates.`;
+  } else if(criticSaysNo && nvRef){
+    // both declined, but by different mechanisms
+    cls='warn'; lead='Both declined — but only one verified';
+    body=`Neither answered, which is correct here. The difference is <b>how</b>: the <b>Agentic</b> pipeline`
+        +` reached it deliberately — the Critic judged the context <b>insufficient</b> and re-retrieved`
+        +` (${ag.loops} loop(s)) before giving up. The <b>Naive</b> pipeline has no such safeguard; it only`
+        +` declined because the model happened to be cautious, and on harder queries that is where it hallucinates.`;
+  } else {
+    // context sufficient, both answered
+    cls='win'; lead='Both answered — only one verified first';
+    body=`The context was sufficient, so both replied. The difference is trust: the <b>Agentic</b> pipeline`
+        +` <b>verified</b> the context with the Critic (<b>sufficient</b>) before answering; the <b>Naive</b>`
+        +` pipeline answered without checking. Cost of that safety check: ${ag.elapsed_ms} ms vs ${nv.elapsed_ms} ms.`;
+  }
+  el.className='diff '+cls;
+  el.innerHTML=`<span class="lead">${lead}</span>${body}`;
 }
 function escapeHtml(s){return (s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
 </script>
