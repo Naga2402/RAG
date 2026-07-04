@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>JISR — Agentic Cross-Lingual RAG</title>
+<style>
+  :root{
+    --bg:#0D1B2A; --bg2:#0a1622; --card:#1C3557; --card2:#16294a;
+    --teal:#00C2CB; --gold:#F4B942; --blue:#7BC8F8; --green:#2ECC71;
+    --purple:#C47BD4; --red:#E05C5C; --text:#EEF4FB; --muted:#7CA2CC;
+    --line:#24406b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',Calibri,system-ui,sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,#12294a 0%,var(--bg) 55%) fixed;
+    color:var(--text);min-height:100vh}
+  a{color:var(--teal)}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 22px 60px}
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--teal),#0a8f96);
+    display:grid;place-items:center;font-weight:800;color:#04222a;font-size:20px;box-shadow:0 6px 20px rgba(0,194,203,.35)}
+  .brand h1{margin:0;font-size:20px;letter-spacing:.3px}
+  .brand p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+  .health{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+    background:var(--card2);border:1px solid var(--line);padding:8px 12px;border-radius:999px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#666}
+  .dot.ok{background:var(--green);box-shadow:0 0 10px var(--green)}
+  .dot.bad{background:var(--red);box-shadow:0 0 10px var(--red)}
+  /* composer */
+  .composer{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+    border-radius:18px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+  textarea{width:100%;min-height:66px;resize:vertical;background:#0e2036;color:var(--text);
+    border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15px;font-family:inherit;outline:none}
+  textarea:focus{border-color:var(--teal)}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+  .seg{display:flex;background:#0e2036;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{background:none;border:none;color:var(--muted);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+  .seg button.active{background:var(--teal);color:#04222a}
+  .spacer{flex:1}
+  .ask{background:linear-gradient(135deg,var(--teal),#0a99a1);color:#04222a;border:none;font-weight:800;
+    padding:11px 26px;border-radius:10px;font-size:14px;cursor:pointer;box-shadow:0 8px 22px rgba(0,194,203,.35)}
+  .ask:disabled{opacity:.5;cursor:default}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{background:#0e2036;border:1px solid var(--line);color:var(--muted);font-size:12px;
+    padding:7px 12px;border-radius:999px;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--teal);color:var(--text)}
+  .chip b{color:var(--gold)}
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 6px}
+  .node{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;position:relative;opacity:.45;transition:.3s}
+  .node.active{opacity:1;border-color:var(--teal);box-shadow:0 0 0 1px var(--teal),0 10px 26px rgba(0,0,0,.3)}
+  .node.done{opacity:1}
+  .node.skip{opacity:.25}
+  .node .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .node .v{font-size:15px;font-weight:700;margin-top:6px;min-height:20px}
+  .node .num{position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;
+    background:#0e2036;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted)}
+  .node.active .num,.node.done .num{background:var(--teal);color:#04222a;border-color:var(--teal)}
+  /* result */
+  .result{margin-top:18px;display:none}
+  .answer{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+    border-radius:16px;padding:20px 22px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .tag{font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .tag b{color:var(--text)}
+  .tag.green{border-color:var(--green);color:var(--green)}
+  .tag.red{border-color:var(--red);color:var(--red)}
+  .tag.gold{border-color:var(--gold);color:var(--gold)}
+  .tag.teal{border-color:var(--teal);color:var(--teal)}
+  .atext{font-size:17px;line-height:1.6;white-space:pre-wrap}
+  .atext.rtl{direction:rtl;text-align:right;font-size:19px}
+  .srch{margin:22px 0 10px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+  .src{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px}
+  .src .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .src .name{font-size:13px;color:var(--blue);font-weight:600;word-break:break-all}
+  .src .snip{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .src .snip.rtl{direction:rtl;text-align:right}
+  .bar{height:6px;width:120px;background:#0e2036;border-radius:6px;overflow:hidden;flex:none}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--green))}
+  .err{background:rgba(224,92,92,.12);border:1px solid var(--red);color:#ffd7d7;padding:14px 16px;
+    border-radius:12px;margin-top:16px;font-size:14px;display:none}
+  .foot{margin-top:34px;text-align:center;color:var(--muted);font-size:12px}
+  .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:#04222a;
+    border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">ج</div>
+      <div>
+        <h1>JISR &nbsp;·&nbsp; Agentic Cross-Lingual RAG</h1>
+        <p>Self-correcting retrieval over Arabic &amp; English — running locally</p>
+      </div>
+    </div>
+    <div class="health"><span class="dot" id="dot"></span><span id="healthTxt">checking…</span></div>
+  </header>
+
+  <div class="composer">
+    <textarea id="q" placeholder="Ask a question about the documents — in English or Arabic…"></textarea>
+    <div class="row">
+      <div class="seg" id="mode">
+        <button data-mode="agentic" class="active">Agentic (with Critic)</button>
+        <button data-mode="naive">Naive RAG</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="ask" id="ask">Ask JISR</button>
+    </div>
+    <div class="chips" id="chips">
+      <div class="chip" data-q="What is the warranty period for the X200 pump?"><b>EN</b> &nbsp;pump warranty period</div>
+      <div class="chip" data-q="ما هي شروط الدفع في عقد الخدمة؟"><b>AR</b> &nbsp;شروط الدفع في العقد</div>
+      <div class="chip" data-q="What are the payment terms in the service agreement?"><b>EN</b> &nbsp;payment terms</div>
+      <div class="chip" data-q="What is the CEO's annual salary and stock options?"><b>Test</b> &nbsp;out-of-scope (should refuse)</div>
+    </div>
+  </div>
+
+  <div class="pipe" id="pipe">
+    <div class="node" id="n1"><div class="num">1</div><div class="k">Router</div><div class="v" id="v1">—</div></div>
+    <div class="node" id="n2"><div class="num">2</div><div class="k">Retrieve</div><div class="v" id="v2">—</div></div>
+    <div class="node" id="n3"><div class="num">3</div><div class="k">Critic</div><div class="v" id="v3">—</div></div>
+    <div class="node" id="n4"><div class="num">4</div><div class="k">Generate</div><div class="v" id="v4">—</div></div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="result" id="result">
+    <div class="answer">
+      <div class="meta" id="meta"></div>
+      <div class="atext" id="atext"></div>
+    </div>
+    <div class="srch">Retrieved sources</div>
+    <div id="sources"></div>
+  </div>
+
+  <div class="foot">JISR &nbsp;·&nbsp; VN Sanjay &nbsp;·&nbsp; 2024AA05123 &nbsp;·&nbsp; M.Tech Dissertation, BITS Pilani</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let mode = "agentic";
+const isRTL = t => /[؀-ۿ]/.test(t||"");
+
+document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
+  mode=b.dataset.mode;
+  document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('active',x===b));
+});
+document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{ $('q').value=c.dataset.q; });
+$('ask').onclick = run;
+$('q').addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) run(); });
+
+async function health(){
+  try{
+    const r = await fetch('/api/health'); const j = await r.json();
+    $('dot').className='dot ok';
+    $('healthTxt').textContent = 'AR: '+j.models.ar+'  ·  EN: '+j.models.en;
+  }catch(e){ $('dot').className='dot bad'; $('healthTxt').textContent='backend offline'; }
+}
+health();
+
+function resetPipe(){
+  for(let i=1;i<=4;i++){ $('n'+i).className='node'; $('v'+i).textContent='—'; }
+  if(mode==='naive'){ $('n3').classList.add('skip'); $('v3').textContent='skipped'; }
+}
+function light(i,val){ const n=$('n'+i); n.classList.remove('active'); n.classList.add('active'); if(val!=null)$('v'+i).textContent=val; }
+function done(i){ const n=$('n'+i); n.classList.remove('active'); n.classList.add('done'); }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function run(){
+  const query = $('q').value.trim();
+  if(!query) return;
+  $('err').style.display='none'; $('result').style.display='none';
+  $('ask').disabled=true; $('ask').innerHTML='<span class="spin"></span> Thinking';
+  resetPipe();
+
+  // animate the pipeline while the request is in flight
+  const lang = isRTL(query) ? 'ar' : 'en';
+  await sleep(150); light(1, lang.toUpperCase()); await sleep(350); done(1);
+  light(2,'searching…');
+
+  let data;
+  try{
+    const r = await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query, mode})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    data = await r.json();
+  }catch(e){
+    $('err').style.display='block';
+    $('err').textContent='Could not reach the JISR backend. Start it with:  uvicorn serve:app --port 8000  (and make sure Ollama + the pgvector container are running).';
+    $('ask').disabled=false; $('ask').textContent='Ask JISR'; return;
+  }
+
+  done(1); $('v1').textContent=(data.lang||lang).toUpperCase();
+  light(2, data.contexts.length+' passages'); await sleep(300); done(2);
+
+  if(mode==='agentic'){
+    const ok = /^(yes|نعم)/i.test(data.critic||'') || !/^(no|لا|كلا)/i.test(data.critic||'');
+    light(3, (data.critic||'').slice(0,18) || '—'); await sleep(350); done(3);
+  }
+  light(4,'writing…'); await sleep(250); done(4); $('v4').textContent='answer ✓';
+
+  render(data, query);
+  $('ask').disabled=false; $('ask').textContent='Ask JISR';
+}
+
+function render(d, query){
+  const rtl = isRTL(d.answer) || d.lang==='ar';
+  const meta = [];
+  meta.push(`<span class="tag teal">Language <b>${(d.lang||'').toUpperCase()}</b></span>`);
+  meta.push(`<span class="tag ${d.mode==='agentic'?'gold':''}">Mode <b>${d.mode}</b></span>`);
+  if(d.loops!=null) meta.push(`<span class="tag">Reflections <b>${d.loops}</b></span>`);
+  if(d.critic!=null){
+    const no = /^(no|لا|كلا)/i.test(d.critic);
+    meta.push(`<span class="tag ${no?'red':'green'}">Critic <b>${no?'insufficient':'sufficient'}</b></span>`);
+  }
+  meta.push(`<span class="tag">Latency <b>${d.elapsed_ms} ms</b></span>`);
+  $('meta').innerHTML = meta.join('');
+  $('atext').className = 'atext'+(rtl?' rtl':'');
+  $('atext').textContent = d.answer || '(no answer)';
+
+  $('sources').innerHTML = (d.contexts||[]).map(c=>{
+    const r = isRTL(c.snippet);
+    return `<div class="src"><div class="top">
+      <div class="name">${c.source} &nbsp;#${c.chunk_idx}</div>
+      <div class="bar"><i style="width:${Math.max(6,Math.min(100,c.score*100))}%"></i></div>
+    </div><div class="snip${r?' rtl':''}">${escapeHtml(c.snippet)}</div></div>`;
+  }).join('') || '<div class="src"><div class="snip">No passages retrieved.</div></div>';
+
+  $('result').style.display='block';
+  $('result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function escapeHtml(s){return (s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+</script>
+</body>
+</html>

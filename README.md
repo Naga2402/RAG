@@ -77,6 +77,17 @@ agreement, and pump manual) with **parallel content**, so cross-lingual retrieva
 and the EN/AR router can be validated before real documents arrive. Real corpora
 go in `data/raw/` (gitignored — never committed).
 
+## Web demo (live app)
+A modern single-page UI backed by the real pipeline (FastAPI over the agent + naive
+paths). With Ollama and the pgvector container running:
+```bash
+pip install -r requirements.txt          # includes fastapi + uvicorn
+python -m uvicorn serve:app --port 8000
+```
+Open **http://localhost:8000** — ask in English or Arabic, toggle Agentic vs Naive,
+and watch the router → retrieve → critic → generate pipeline with live citations.
+See `../JISR_DEMO_GUIDE.md` for a scripted walk-through.
+
 ## Repo layout
 | Path | Purpose |
 |------|---------|
