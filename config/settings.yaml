@@ -73,7 +73,11 @@ agent:
   router: semantic             # semantic intent-based EN/AR routing
 
 eval:
-  golden_set: data/golden/sample_golden.jsonl
+  golden_set: data/golden/golden.jsonl
+  # Ragas judges locally: the LLM judge is inference.critic_model, and answer
+  # relevancy needs an embedding model served by Ollama (pull it once:
+  #   ollama pull nomic-embed-text).  Nothing leaves the machine.
+  judge_embeddings: nomic-embed-text
   metrics: [faithfulness, answer_relevancy, context_precision, context_recall]
   baselines: [naive, agentic]
   results_dir: results
