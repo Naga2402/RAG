@@ -15,3 +15,5 @@ tessdata/*.traineddata
 data/raw/en/
 data/raw/ar/
 data/raw/manifest.jsonl
+data/scanned/
+data/golden/golden.jsonl
