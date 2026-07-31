@@ -282,7 +282,7 @@ body.light .send svg{fill:#fff}
     <div class="sh">
       <div>
         <h2>Live Benchmark · Agentic vs Naive</h2>
-        <div class="sub">Runs a fixed set of English &amp; Arabic questions through both pipelines and scores behaviour.</div>
+        <div class="sub" id="benchSub">Loading the evaluation set…</div>
       </div>
       <button class="x" id="closeBench">✕</button>
     </div>
@@ -483,26 +483,62 @@ function compareEl(ag,nv){
 }
 
 /* ---------- benchmark mode ---------- */
-const BENCH=[
-  {q:'What is the warranty period for the X200 pump?',type:'in',expect:['24','month']},
-  {q:'What are the payment terms in the service agreement?',type:'in',expect:['30','net']},
-  {q:'ما هي شروط الدفع في عقد الخدمة؟',type:'in',expect:['30','يوم']},
-  {q:'ما هي مدة ضمان المضخة الصناعية X200؟',type:'in',expect:['24','شهر']},
-  {q:"What is the CEO's annual salary and stock options?",type:'out',expect:[]},
-];
+// Loaded from /api/golden — the REAL evaluation set used by the dissertation
+// benchmark, so the UI scoreboard reflects the same data as the Ragas run.
+let BENCH=[];
+async function loadBench(){
+  try{
+    const j=await(await fetch('/api/golden?n=6')).json();
+    BENCH=(j.items||[]).map(it=>({
+      q:it.question, type:it.type==='out_of_scope'?'out':'in',
+      truth:it.ground_truth||'', lang:it.lang, id:it.id, source:it.source}));
+    const s=$('#benchSub');
+    if(s) s.textContent=BENCH.length
+      ? `Sampled from the real golden set (${j.total_golden} items) — the same data as the Ragas benchmark.`
+      : 'Golden set not built yet — run scripts/build_golden.py.';
+    // refresh the composer suggestion chips with real corpus questions
+    const wrap=$('#suggest');
+    if(wrap && BENCH.length){
+      wrap.innerHTML=BENCH.slice(0,5).map(b=>{
+        const tag=b.type==='out'?'Test':b.lang.toUpperCase();
+        const label=b.q.length>42?b.q.slice(0,42)+'…':b.q;
+        return `<div class="sg" data-q="${b.q.replace(/"/g,'&quot;')}"><b>${tag}</b> · ${esc(label)}</div>`;
+      }).join('');
+      wrap.querySelectorAll('.sg').forEach(c=>c.onclick=()=>{
+        q.value=c.dataset.q; q.focus(); q.dispatchEvent(new Event('input'));});
+    }
+  }catch(e){ BENCH=[]; }
+}
+loadBench();
 const modal=$('#modal');
 $('#benchBtn').onclick=()=>modal.classList.add('open');
 $('#closeBench').onclick=()=>modal.classList.remove('open');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open');};
 
+/* Behavioural scoring against the golden set's ground truth.
+   out-of-scope  -> correct only if the system DECLINED
+   in-scope      -> must answer, and recall the key tokens of the ground truth
+   (token overlap rather than exact match, since phrasing legitimately varies). */
+function keyTokens(s){
+  return (s||'').toLowerCase()
+    .replace(/[.,;:!?"'()\[\]«»]/g,' ')
+    .split(/\s+/)
+    .filter(t=>t.length>2 || /\d/.test(t));
+}
 function scored(ans,item){
+  if(item.type==='out') return refusal(ans);
+  if(refusal(ans)) return false;
+  const toks=keyTokens(item.truth); if(!toks.length) return false;
   const a=(ans||'').toLowerCase();
-  if(item.type==='out') return refusal(ans);            // correct = declined
-  return !refusal(ans) && item.expect.every(k=>a.includes(k.toLowerCase()));  // answered & grounded
+  const hit=toks.filter(t=>a.includes(t)).length;
+  return hit/toks.length >= 0.6;      // recalled most of the expected answer
 }
 let benchRunning=false;
 $('#runBench').onclick=async()=>{
-  if(benchRunning)return;benchRunning=true;
+  if(benchRunning)return;
+  if(!BENCH.length){ await loadBench(); }
+  if(!BENCH.length){ $('#benchStatus').textContent='No golden set available — build it first.'; return; }
+  benchRunning=true;
   const btn=$('#runBench');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Running…';
   document.querySelectorAll('.agN,.nvN').forEach(e=>e.textContent=BENCH.length);
   $('#benchRows').innerHTML='';$('#prog').style.width='0';
@@ -520,7 +556,7 @@ $('#runBench').onclick=async()=>{
     if(criticNo(ag.critic)||ag.loops>1)catches++;
 
     const row=document.createElement('div');row.className='brow';
-    row.innerHTML=`<div class="qq ${isRTL(it.q)?'rtl':''}"><span class="tp">${it.type==='out'?'out-of-scope · must decline':'in-scope · must answer'}</span>${esc(it.q)}</div>
+    row.innerHTML=`<div class="qq ${isRTL(it.q)?'rtl':''}"><span class="tp">${it.id||''} · ${it.type==='out'?'out-of-scope · must decline':'expected: '+esc((it.truth||'').slice(0,44))}</span>${esc(it.q)}</div>
       <div class="verdict ${agOk?'pass':'failv'}">${agOk?'✓ PASS':'✗'}<small>${ag.elapsed_ms} ms</small></div>
       <div class="verdict ${nvOk?'pass':'failv'}">${nvOk?'✓ PASS':'✗'}<small>${nv.elapsed_ms} ms</small></div>`;
     $('#benchRows').appendChild(row);

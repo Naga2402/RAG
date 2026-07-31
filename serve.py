@@ -11,6 +11,8 @@ Then open http://localhost:8000
 """
 from __future__ import annotations
 
+import json
+import random
 import time
 from pathlib import Path
 
@@ -89,6 +91,32 @@ def compare(req: AskRequest):
     agentic = _run("agentic", req.query)
     naive = _run("naive", req.query)
     return {"query": req.query, "agentic": agentic, "naive": naive}
+
+
+@app.get("/api/golden")
+def golden(n: int = 6):
+    """Sample the REAL golden evaluation set so the UI benchmark runs against the
+    same data as the dissertation benchmark (not hard-coded demo questions).
+    Prefers short, checkable answers and keeps the EN/AR mix plus a refusal probe."""
+    path = ROOT / CFG["eval"]["golden_set"]
+    if not path.exists():
+        return {"items": [], "error": "golden set not built yet"}
+    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+
+    def short(r):
+        return len(r.get("ground_truth", "")) < 60 and len(r.get("question", "")) < 110
+
+    ins = [r for r in rows if r.get("type") == "in_scope" and short(r)]
+    oos = [r for r in rows if r.get("type") == "out_of_scope"]
+    rng = random.Random(13)
+    en = [r for r in ins if r["lang"] == "en"]; rng.shuffle(en)
+    ar = [r for r in ins if r["lang"] == "ar"]; rng.shuffle(ar)
+    half = max(1, (n - 1) // 2)
+    picked = en[:half] + ar[:half] + oos[:1]
+    return {"total_golden": len(rows), "items": [
+        {"id": r["id"], "lang": r["lang"], "type": r["type"],
+         "question": r["question"], "ground_truth": r["ground_truth"],
+         "source": r.get("source")} for r in picked]}
 
 
 @app.get("/")

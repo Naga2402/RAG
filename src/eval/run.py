@@ -40,6 +40,9 @@ def _load_golden(path: Path, limit: int | None, lang: str | None) -> list[dict]:
         en = [r for r in ins if r["lang"] == "en"][: max(1, limit // 2)]
         ar = [r for r in ins if r["lang"] == "ar"][: max(1, limit // 2)]
         rows = en + ar + oos
+    # Group by language. Ollama holds ONE model resident, so alternating EN/AR
+    # forces a 5-11 GB VRAM swap per question; grouping makes each model load once.
+    rows.sort(key=lambda r: (r.get("lang") != "en", r.get("type") == "out_of_scope"))
     return rows
 
 
@@ -136,9 +139,18 @@ def main() -> None:
         for system, (cols, lats) in runs.items():
             print(f"  scoring {system}…")
             score = _evaluate(cols, llm, emb)
-            d = {k: float(v) for k, v in dict(score).items() if isinstance(v, (int, float))}
+            # ragas 0.4.x: read per-sample scores via to_pandas() and average the
+            # metric columns (the result object is not dict()-convertible).
+            sdf = score.to_pandas()
+            d = {}
+            for m in ("faithfulness", "answer_relevancy",
+                      "context_precision", "context_recall"):
+                if m in sdf.columns:
+                    d[m] = round(float(sdf[m].astype(float).mean(skipna=True)), 4)
             d["avg_latency_s"] = round(sum(lats) / len(lats), 2)
             rows[system] = d
+            sdf.to_csv(out_dir / f"per_question_{system}.csv", index=False,
+                       encoding="utf-8-sig")
     else:
         for system, (cols, lats) in runs.items():
             rows[system] = {"avg_latency_s": round(sum(lats) / len(lats), 2)}
