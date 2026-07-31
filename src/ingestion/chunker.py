@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from src.config import CFG
+from src.ingestion.arabic import normalize_text
 from src.ingestion.language import detect_language
 
 _C = CFG["ingestion"]["chunking"]
@@ -26,6 +27,13 @@ def _segments(text: str) -> list[str]:
     return blocks or [text.strip()]
 
 
+def _make(buf: str, source: str, idx: int) -> Chunk:
+    """Normalise FIRST (so Arabic presentation forms become canonical letters),
+    then detect the language on the canonical text."""
+    text = normalize_text(buf)
+    return Chunk(text, detect_language(text), source, idx)
+
+
 def chunk_text(text: str, source: str) -> list[Chunk]:
     size, overlap = _C["chunk_size"], _C["chunk_overlap"]
     chunks: list[Chunk] = []
@@ -36,11 +44,12 @@ def chunk_text(text: str, source: str) -> list[Chunk]:
             buf = f"{buf}\n{seg}".strip()
         else:
             if buf:
-                chunks.append(Chunk(buf, detect_language(buf), source, idx))
+                chunks.append(_make(buf, source, idx))
                 idx += 1
                 buf = (buf[-overlap:] + "\n" + seg).strip()
             else:
                 buf = seg
     if buf:
-        chunks.append(Chunk(buf, detect_language(buf), source, idx))
+        lang = detect_language(buf)
+        chunks.append(Chunk(normalize_text(buf, lang), lang, source, idx))
     return chunks

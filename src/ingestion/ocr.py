@@ -32,6 +32,17 @@ _POPPLER = _OCR.get("poppler_path") or os.getenv("POPPLER_PATH") or None
 
 def _ocr_image(img) -> str:
     import pytesseract  # lazy: needs Tesseract binary
+
+    # Windows installs Tesseract outside PATH; point pytesseract at it explicitly.
+    exe = _OCR.get("tesseract_cmd") or os.getenv("TESSERACT_CMD")
+    if not exe:
+        for cand in (r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                     r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"):
+            if Path(cand).exists():
+                exe = cand
+                break
+    if exe:
+        pytesseract.pytesseract.tesseract_cmd = exe
     return pytesseract.image_to_string(img, lang=_OCR["languages"])
 
 

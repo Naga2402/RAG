@@ -46,4 +46,8 @@ def embed(texts: list[str], dense: bool = True, sparse: bool = True) -> list[dic
 
 
 def embed_query(text: str) -> dict:
-    return embed([text])[0]
+    """Embed a query. Applies the SAME Arabic normalisation used at index time —
+    otherwise a query written with diacritics/alef variants would not match the
+    canonicalised chunks in the index."""
+    from src.ingestion.arabic import normalize_text
+    return embed([normalize_text(text)])[0]

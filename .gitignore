@@ -12,3 +12,6 @@ results/*
 .ragas_cache/
 tessdata/*.traineddata
 
+data/raw/en/
+data/raw/ar/
+data/raw/manifest.jsonl
