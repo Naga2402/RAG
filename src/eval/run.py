@@ -52,8 +52,12 @@ def _local_judge():
     from ragas.embeddings import LangchainEmbeddingsWrapper
     from ragas.llms import LangchainLLMWrapper
 
-    judge = CFG["inference"].get("critic_model") or CFG["inference"]["models"]["en"]
-    llm = ChatOllama(model=judge, temperature=0.0,
+    judge = (CFG["eval"].get("judge_model")
+             or CFG["inference"].get("critic_model")
+             or CFG["inference"]["models"]["en"])
+    # format="json" uses Ollama's constrained decoding: every Ragas metric prompt
+    # expects structured JSON, and free-form output was causing parser failures.
+    llm = ChatOllama(model=judge, temperature=0.0, format="json",
                      num_ctx=CFG["inference"]["context_window"])
     emb = OllamaEmbeddings(model=CFG["eval"].get("judge_embeddings", "nomic-embed-text"))
     return LangchainLLMWrapper(llm), LangchainEmbeddingsWrapper(emb), judge
@@ -79,9 +83,13 @@ def _collect(system: str, golden: list[dict]) -> tuple[dict, list[float]]:
             print(f"    ! {g['id']}: {e}")
             ans, ctx = "", []
         lats.append(time.perf_counter() - t0)
+        # Faithfulness cost scales with (statements x contexts), so cap how many
+        # passages the JUDGE sees. Both systems get the identical cap, so the
+        # comparison stays fair; the pipelines themselves are unchanged.
+        keep = int(CFG["eval"].get("judge_max_contexts", 4))
         cols["question"].append(g["question"])
         cols["answer"].append(ans)
-        cols["contexts"].append([c.get("content", "") for c in ctx])
+        cols["contexts"].append([c.get("content", "")[:1200] for c in ctx[:keep]])
         cols["ground_truth"].append(g["ground_truth"])
         if i % 10 == 0 or i == len(golden):
             print(f"    {system}: {i}/{len(golden)}  (avg {sum(lats)/len(lats):.1f}s)")
@@ -93,12 +101,22 @@ def _evaluate(cols: dict, llm, emb):
     from ragas import evaluate
     from ragas.metrics import (answer_relevancy, context_precision,
                                context_recall, faithfulness)
+    from ragas.run_config import RunConfig
 
+    # A single local GPU serves ONE request at a time. Ragas defaults to 16
+    # concurrent workers, so 15 of them sit queued and hit the 180 s timeout —
+    # which silently empties faithfulness / context_precision / context_recall.
+    # Run (near-)serially with a generous timeout instead.
+    run_config = RunConfig(
+        timeout=int(CFG["eval"].get("judge_timeout_s", 900)),
+        max_workers=int(CFG["eval"].get("judge_workers", 2)),
+        max_retries=3,
+    )
     ds = Dataset.from_dict(cols)
     return evaluate(
         ds,
         metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
-        llm=llm, embeddings=emb, raise_exceptions=False,
+        llm=llm, embeddings=emb, raise_exceptions=False, run_config=run_config,
     )
 
 

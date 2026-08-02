@@ -78,6 +78,17 @@ eval:
   # relevancy needs an embedding model served by Ollama (pull it once:
   #   ollama pull nomic-embed-text).  Nothing leaves the machine.
   judge_embeddings: nomic-embed-text
+  # A single local GPU answers one request at a time, so Ragas must not fan out.
+  # With the default 16 workers / 180 s timeout, faithfulness, context_precision
+  # and context_recall came back EMPTY (162 timeouts).
+  judge_workers: 2
+  judge_timeout_s: 900
+  # Judge model: needs reliable structured (JSON) output. llama3:8b failed the
+  # faithfulness NLI prompt repeatedly; qwen2.5 handles it far better.
+  judge_model: qwen2.5:7b-instruct
+  # Cap passages shown to the judge — faithfulness is O(statements x contexts).
+  # Applied identically to both systems, so the comparison remains fair.
+  judge_max_contexts: 4
   metrics: [faithfulness, answer_relevancy, context_precision, context_recall]
   baselines: [naive, agentic]
   results_dir: results
