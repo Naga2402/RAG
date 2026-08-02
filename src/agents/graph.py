@@ -1,7 +1,12 @@
 r"""Assembles the JISR LangGraph: the agentic reflection loop.
 
-    decompose -> route -> retrieve -> critic --(retry)--> retrieve
+    decompose -> route -> retrieve -> critic --(retry)--> rewrite -> retrieve
                                             \--(generate)--> generate -> END
+
+The retry edge passes through `rewrite`, which reformulates the search query.
+Looping straight back to `retrieve` would re-run the identical vector search and
+return identical passages (measured in run 01: 65/65 identical context sets), so
+verification alone produced no retrieval gain.
 """
 from __future__ import annotations
 
@@ -20,6 +25,7 @@ def build_graph():
     g.add_node("route", nodes.route_node)
     g.add_node("retrieve", nodes.retrieve_node)
     g.add_node("critic", nodes.critic_node)
+    g.add_node("rewrite", nodes.rewrite_node)
     g.add_node("generate", nodes.generate_node)
 
     g.set_entry_point("decompose")
@@ -28,8 +34,9 @@ def build_graph():
     g.add_edge("retrieve", "critic")
     g.add_conditional_edges(
         "critic", nodes.should_retry,
-        {"retry": "retrieve", "generate": "generate"},
+        {"retry": "rewrite", "generate": "generate"},
     )
+    g.add_edge("rewrite", "retrieve")   # reformulate, THEN search again
     g.add_edge("generate", END)
     return g.compile()
 

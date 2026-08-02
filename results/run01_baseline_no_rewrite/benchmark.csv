@@ -1,0 +1,3 @@
+,faithfulness,answer_relevancy,context_precision,context_recall,avg_latency_s
+naive,0.2853,0.2432,0.78,0.8949,7.61
+agentic,0.2925,0.2201,0.7834,0.8949,10.36

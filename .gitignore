@@ -17,3 +17,7 @@ data/raw/ar/
 data/raw/manifest.jsonl
 data/scanned/
 data/golden/golden.jsonl
+
+# Keep archived benchmark runs (dissertation evidence)
+!results/run*_*/
+!results/run*_*/**

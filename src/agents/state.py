@@ -5,7 +5,9 @@ from typing import TypedDict
 
 
 class AgentState(TypedDict, total=False):
-    query: str              # original user query
+    query: str              # original user query (never mutated)
+    search_query: str       # what retrieval uses; rewritten between reflection loops
+    rewrites: list[str]     # history of reformulated queries (for analysis)
     lang: str               # 'en' | 'ar' (routing decision)
     sub_queries: list[str]  # from decomposition node
     contexts: list[dict]    # retrieved chunks

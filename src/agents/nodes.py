@@ -7,6 +7,8 @@ pass (bounded by max_reflection_loops) before the model is allowed to answer.
 """
 from __future__ import annotations
 
+import re
+
 from src.agents.router import route
 from src.agents.state import AgentState
 from src.config import CFG
@@ -33,6 +35,7 @@ def decompose_node(state: AgentState) -> AgentState:
     q = state["query"]
     state["sub_queries"] = [q]   # TODO: LLM-driven decomposition for multi-hop
     state.setdefault("loops", 0)
+    state["search_query"] = q    # what retrieval actually uses; rewritten on retry
     return state
 
 
@@ -42,9 +45,52 @@ def route_node(state: AgentState) -> AgentState:
 
 
 def retrieve_node(state: AgentState) -> AgentState:
+    """Retrieve using `search_query`, which the rewrite node updates between
+    reflection loops. Using the original query here would make every retry
+    return identical passages (measured: 65/65 identical in run 01)."""
     lang = state["lang"]
-    emb = embed_query(state["query"])
+    emb = embed_query(state.get("search_query") or state["query"])
     state["contexts"] = vs.hybrid_search(_db(), lang, emb)
+    return state
+
+
+_REWRITE_SYS = {
+    "en": ("You rewrite search queries for a document retrieval system. The previous "
+           "search did not find enough information. Rewrite the question as a better "
+           "search query: keep the key entities, add likely synonyms and domain terms, "
+           "and drop conversational filler. Reply with ONLY the rewritten query."),
+    "ar": ("أنت تعيد صياغة استعلامات البحث لنظام استرجاع المستندات. لم يعثر البحث السابق "
+           "على معلومات كافية. أعد صياغة السؤال كاستعلام بحث أفضل: احتفظ بالكيانات الأساسية، "
+           "وأضف المرادفات والمصطلحات المتخصصة المحتملة. أجب بالاستعلام الجديد فقط."),
+}
+
+
+def rewrite_node(state: AgentState) -> AgentState:
+    """Reformulate the query after the Critic rejects the retrieved context.
+
+    This is what makes the reflection loop meaningful: verification alone can
+    detect a bad context but cannot repair one — the retry must change the
+    retrieval input.
+    """
+    lang = state.get("lang", "en")
+    prev = state.get("search_query") or state["query"]
+    prompt = (f"Original question: {state['query']}\n"
+              f"Previous search query: {prev}\n"
+              f"Critic feedback: context was insufficient.\n\n"
+              f"Rewritten search query:")
+    try:
+        new_q = generate(prompt, lang=lang, system=_REWRITE_SYS.get(lang, _REWRITE_SYS["en"]),
+                         model=_CRITIC_MODEL).strip().strip('"').split("\n")[0]
+    except Exception:  # noqa: BLE001
+        new_q = ""
+    # Strip template placeholders like "[industry/sector]" that the model
+    # sometimes emits, and any leading label it prefixes.
+    new_q = re.sub(r"\[[^\]]*\]", " ", new_q)
+    new_q = re.sub(r"^\s*(rewritten\s+)?(search\s+)?query\s*:\s*", "", new_q, flags=re.I)
+    new_q = re.sub(r"\s{2,}", " ", new_q).strip()
+    # Fall back to the previous query if the rewrite is empty or degenerate.
+    state["search_query"] = new_q if len(new_q) >= 8 else prev
+    state["rewrites"] = state.get("rewrites", []) + [state["search_query"]]
     return state
 
 
